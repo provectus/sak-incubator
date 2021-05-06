@@ -30,7 +30,7 @@ variable "grafana_loki_password" {
 
 variable "domains" {
   type        = list(string)
-  default     = []
+  default     = ["local"]
   description = "A list of domains to use for ingresses"
 }
 
@@ -50,7 +50,7 @@ variable "namespace_name" {
 variable "chart_version" {
   type        = string
   description = "A Helm Chart version"
-  default     = "2.0.0"
+  default     = "2.3.1"
 }
 
 variable "tags" {

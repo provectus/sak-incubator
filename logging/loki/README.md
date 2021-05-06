@@ -56,10 +56,10 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_argocd"></a> [argocd](#input\_argocd) | A set of values for enabling deployment through ArgoCD | `map(string)` | n/a | yes |
-| <a name="input_chart_version"></a> [chart\_version](#input\_chart\_version) | A Helm Chart version | `string` | `"2.0.0"` | no |
+| <a name="input_chart_version"></a> [chart\_version](#input\_chart\_version) | A Helm Chart version | `string` | `"2.3.1"` | no |
 | <a name="input_cluster_name"></a> [cluster\_name](#input\_cluster\_name) | A name of the Amazon EKS cluster | `string` | `null` | no |
 | <a name="input_conf"></a> [conf](#input\_conf) | A custom configuration for deployment | `map(string)` | `{}` | no |
-| <a name="input_domains"></a> [domains](#input\_domains) | A list of domains to use for ingresses | `list(string)` | `[]` | no |
+| <a name="input_domains"></a> [domains](#input\_domains) | A list of domains to use for ingresses | `list(string)` | <pre>[<br>  "local"<br>]</pre> | no |
 | <a name="input_grafana_loki_password"></a> [grafana\_loki\_password](#input\_grafana\_loki\_password) | Password for grafana admin | `string` | `""` | no |
 | <a name="input_module_depends_on"></a> [module\_depends\_on](#input\_module\_depends\_on) | A list of explicit dependencies | `list(any)` | `[]` | no |
 | <a name="input_namespace"></a> [namespace](#input\_namespace) | A name of the existing namespace | `string` | `""` | no |

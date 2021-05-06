@@ -85,11 +85,15 @@ locals {
     "promtail.enabled"                    = true
     "fluent-bit.enabled"                  = false
     "grafana.enabled"                     = true
-    "grafana.pvc.enabled"                 = true
+    "grafana.ingress.enabled"             = true
+    "grafana.ingress.hosts[0]"            = "grafana-loki.${var.domains[0]}"
+    "grafana.persistence.enabled"         = true
+    "grafana.persistence.size"            = "1Gi"
     "grafana.adminPassword"               = "KMS_ENC:${aws_kms_ciphertext.grafana_loki_password[0].ciphertext_blob}:"
     "grafana.sidecar.datasources.enabled" = true
-    "grafana.image.tag"                   = "6.7.0"
     "prometheus.enabled"                  = false
+    "loki.persistence.enabled"            = true
+    "loki.persistence.size"               = "10Gi"
   }
 
   application = {
