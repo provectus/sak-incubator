@@ -1,0 +1,278 @@
+---
+## Default values for cvat.
+## This is a YAML-formatted file.
+## Declare variables to be passed into your templates.
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+cvat:
+  backend:
+    replicas: 1
+    image: openvino/cvat_server
+    tag: ${cvat_tag}
+    labels: {}
+    ##  test: test
+    annotations: {}
+    ## test.io/test: test
+    resources: {}
+    affinity: {}
+    ## nodeAffinity:
+    ##   requiredDuringSchedulingIgnoredDuringExecution:
+    ##     nodeSelectorTerms:
+    ##     - matchExpressions:
+    ##       - key: kubernetes.io/e2e-az-name
+    ##         operator: In
+    ##         values:
+    ##         - e2e-az1
+    ##         - e2e-az2
+    envs:
+      ALLOWED_HOSTS: "*"
+      DJANGO_MODWSGI_EXTRA_ARGS: ""
+      CVAT_SERVERLESS: 1
+    additionalEnv: []
+    ## Example:
+    ##  - name: volume-from-secret
+    ## - name: TEST
+    ##  value: "test"
+    additionalVolumes: []
+    ## Example(assumes that pvc was already created):
+    ## - name: tmp
+    ##   persistentVolumeClaim:
+    ##       claimName: tmp
+    additionalVolumeMounts: []
+    ## Example:
+    ## -   mountPath: /tmp
+    ##     name: tmp
+    ##     subPath: test
+    service:
+      type: LoadBalancer
+      ports:
+        - port: 8080
+          targetPort: 8080
+          protocol: TCP
+          name: http
+    defaultStorage:
+      enabled: true
+      size: 20Gi
+  frontend:
+    replicas: 1
+    image: openvino/cvat_ui
+    tag: ${cvat_tag}
+    labels: {}
+    ##  test: test
+    annotations: {}
+    ## test.io/test: test
+    resources: {}
+    affinity: {}
+    ## nodeAffinity:
+    ##   requiredDuringSchedulingIgnoredDuringExecution:
+    ##     nodeSelectorTerms:
+    ##     - matchExpressions:
+    ##       - key: kubernetes.io/e2e-az-name
+    ##         operator: In
+    ##         values:
+    ##         - e2e-az1
+    ##         - e2e-az2
+    additionalEnv: []
+    ## Example:
+    ##  - name: volume-from-secret
+    ## - name: TEST
+    ##  value: "test"
+    additionalVolumes: []
+    ## Example(assumes that pvc was already created):
+    ## - name: tmp
+    ##   persistentVolumeClaim:
+    ##       claimName: tmp
+    additionalVolumeMounts: []
+    ## Example:
+    ## -   mountPath: /tmp
+    ##     name: tmp
+    ##     subPath: test
+    service:
+      type: LoadBalancer
+      ports:
+        - port: 80
+          targetPort: 80
+          protocol: TCP
+          name: http
+
+##
+## PostgreSQL chart configuration
+##
+## https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
+##
+postgresql:
+  ## See https://github.com/bitnami/charts/blob/master/bitnami/postgresql/ for more info
+  enabled: ${postgresql_local} # false for external db
+  external:
+    host: 127.0.0.1
+    port: 5432
+    user: postgres
+    password: postgres
+    dbname: cvat
+  ## If not external following config will be applied by default
+  global:
+    postgresql:
+      existingSecret: cvat-postgres-secret
+  secret:
+    create: true
+    name: postgres-secret
+    password: cvat_postgresql
+    postgres_password: cvat_postgresql_postgres
+    replication_password: cvat_postgresql_replica
+  postgresqlDatabase: "${postgresql_database}"
+  postgresqlUsername: "${postgresql_username}"
+  postgresqlPassword: "${postgresql_password}"
+  service:
+    port: 5432
+
+externalDatabase:
+  ## All of these values are only used when postgresql.enabled is set to false
+  ## Database host
+  ##
+  host: ${postgresql_host}
+  ## non-root Username for Airflow Database
+  ##
+  user: "${postgresql_username}"
+  ## Database password
+  ##
+  password: "${postgresql_password}"
+  ## Database name
+  ##
+  database: "${postgresql_database}"
+  ## Database port number
+  ##
+  port: ${postgresql_port}
+
+##
+## Redis chart configuration
+##
+## https://github.com/bitnami/charts/blob/master/bitnami/redis/values.yaml
+##
+redis:
+  enabled: ${redis_local}
+  external:
+      host: 127.0.0.1
+  usePassword: false
+  cluster:
+    enabled: false
+
+externalRedis:
+  ## All of these values are only used when redis.enabled is set to false
+  ## Redis host
+  ##
+  host: "${redis_host}"
+  ## Redis port number
+  ##
+  port: ${redis_port}
+  ## Redis password
+  ##
+  password: "${redis_password}"
+  ## Redis username
+  ## Most Redis implementnations do not require a username to authenticate
+  ## and it should be enough with the password
+  ##
+  username: "${redis_username}"
+
+ingress:
+  ## Set to true to enable ingress record generation
+  ##
+  enabled: true
+
+  ## Set this to true in order to add the corresponding annotations
+  ## for cert-manager
+  ##
+  certManager: false
+
+  ## Ingress annotations done as key:value pairs
+  ## For a full list of possible ingress annotations, please see
+  ## ref: https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md
+  ##
+  ## If tls is set to true, annotation ingress.kubernetes.io/secure-backends: "true" will automatically be set
+  ## If certManager is set to true, annotation kubernetes.io/tls-acme: "true" will automatically be set
+  ##
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: 1024m
+    nginx.ingress.kubernetes.io/proxy-max-temp-file-size: 1024m
+
+  ## The list of hostnames to be covered with this ingress record.
+  ## Most likely this will be just one host, but in the event more hosts are needed, this is an array
+  ##
+  hosts:
+    - host: ${cvat_url}
+      paths:
+        - path: "/api"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/git"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/tensorflow"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/auto_annotation"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/analytics"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/auto_annotation"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/static"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/opencv"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/admin"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/documentation"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/dextr"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+        - path: "/reid"
+          pathType: "Prefix"
+          service:
+            name: cvat-backend-service
+            port: 8080
+
+        - path: "/"
+          pathType: "Prefix"
+          service:
+            name: cvat-frontend-service
+            port: 80
+
+#  tls:
+#    - hosts:
+#        - ${cvat_url}
+#      secretName: ingress-tls-cvat
