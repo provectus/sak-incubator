@@ -8,4 +8,9 @@ module "keycloak" {
   cluster_name = module.kubernetes.cluster_name
   argocd       = module.argocd.state
   domains      = local.domain
+  
+  
+  
+To retrive keyclock password:
+aws --region <your-region> ssm get-parameter  --with-decryption --name /<your-cluster-name>/keyclock/password | jq -r '.Parameter.Value' 
 
