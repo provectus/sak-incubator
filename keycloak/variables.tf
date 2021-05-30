@@ -33,3 +33,21 @@ variable "chart_version" {
   default     = ""
 }
 
+
+variable "chart_name" {
+  type        = string
+  description = "A chart name"
+  default     = ""
+}
+
+variable "release_name" {
+  type        = string
+  description = "A release name"
+  default     = ""
+}
+
+variable "conf" {
+  type        = map(string)
+  description = "A custom configuration for deployment"
+  default     = {}
+}
