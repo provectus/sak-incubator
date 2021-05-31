@@ -144,7 +144,7 @@ resource "local_file" "runner_controller_secret" {
 
 locals {
   name       = "actions-runner-controller"
-  repository = "https://summerwind.github.io/actions-runner-controller"
+  repository = "https://actions-runner-controller.github.io/actions-runner-controller"
   chart      = "actions-runner-controller"
   conf       = merge(local.conf_defaults, var.conf)
   conf_defaults = {
