@@ -28,12 +28,6 @@ variable "chart_version" {
   default     = "1.10.1"
 }
 
-variable "aws_private" {
-  type        = bool
-  description = "Set true or false to use private or public infrastructure"
-  default     = false
-}
-
 variable "argocd" {
   type        = map(string)
   description = "A set of values for enabling deployment through ArgoCD"
