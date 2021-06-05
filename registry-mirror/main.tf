@@ -89,16 +89,14 @@ locals {
   conf = merge(local.conf_defaults, var.conf)
   conf_defaults = merge(
     {
-      "ingress.enabled"           = true
-      "ingress.hosts[0]"          = "docker-hub-mirror.${var.domains[0]}"
-      "ingress.tls[0].secretName" = "docker-hub-mirror-tls"
-      "ingress.tls[0].hosts[0]"   = "docker-hub-mirror.${var.domains[0]}"
-      "ingress.annotations" = {
-        "cert-manager\\.io/cluster-issuer" = "letsencrypt-prod"
-        "kubernetes.io/tls-acme"           = "true"
-        "kubernetes\\.io/ingress.class"    = "internal"
-      }
-      "persistence.size"           = "10Gi"
-      "configData.proxy.remoteurl" = "https://registry-1.docker.io"
+      "ingress.enabled"                                      = true
+      "ingress.hosts[0]"                                     = "docker-hub-mirror.${var.domains[0]}"
+      "ingress.tls[0].secretName"                            = "docker-hub-mirror-tls"
+      "ingress.tls[0].hosts[0]"                              = "docker-hub-mirror.${var.domains[0]}"
+      "ingress.annotations.cert-manager\\.io/cluster-issuer" = "letsencrypt-prod"
+      "ingress.annotations.kubernetes\\.io/tls-acme"         = "true"
+      "ingress.annotations.kubernetes\\.io/ingress.class"    = "internal"
+      "persistence.size"                                     = "10Gi"
+      "configData.proxy.remoteurl"                           = "https://registry-1.docker.io"
   })
 }
