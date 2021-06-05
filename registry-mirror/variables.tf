@@ -45,3 +45,9 @@ variable "tags" {
   default     = {}
   description = "A tags for attaching to new created AWS resources"
 }
+
+variable "domains" {
+  type        = list(string)
+  default     = []
+  description = "A list of domains to use for ingresses"
+}

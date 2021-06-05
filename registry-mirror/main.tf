@@ -90,9 +90,9 @@ locals {
   conf_defaults = merge(
     {
       "ingress.enabled"           = true
-      "ingress.hosts[0]"          = "docker-hub-mirror.${local.domain[0]}"
+      "ingress.hosts[0]"          = "docker-hub-mirror.${var.domains[0]}"
       "ingress.tls[0].secretName" = "docker-hub-mirror-tls"
-      "ingress.tls[0].hosts[0]"   = "docker-hub-mirror.${local.domain[0]}"
+      "ingress.tls[0].hosts[0]"   = "docker-hub-mirror.${var.domains[0]}"
       "ingress.annotations" = {
         "cert-manager\\.io/cluster-issuer" = "letsencrypt-prod"
         "kubernetes.io/tls-acme"           = "true"
