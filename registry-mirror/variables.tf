@@ -51,3 +51,9 @@ variable "domains" {
   default     = []
   description = "A list of domains to use for ingresses"
 }
+
+variable "storage" {
+  type        = string
+  default     = "filesystem"
+  description = "Storage system to use. Can filesystem, s3"
+}

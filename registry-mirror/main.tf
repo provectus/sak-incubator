@@ -12,6 +12,49 @@ resource "kubernetes_namespace" "this" {
   }
 }
 
+resource "aws_s3_bucket" "registry" {
+  count         = 1 - local.storage
+  bucket        = "registry-mirror-bucket"
+  acl           = "private"
+  force_destroy = true
+
+  tags = var.tags
+}
+
+resource "aws_iam_user" "registry" {
+  count = 1 - local.storage
+  name  = "${var.cluster_name}-registry"
+  path  = "/system/"
+
+  tags = var.tags
+}
+
+resource "aws_iam_access_key" "registry" {
+  count = 1 - local.storage
+  user  = aws_iam_user.registry.name
+}
+
+resource "aws_iam_user_policy" "registry" {
+  count = 1 - local.storage
+  name  = "${var.cluster_name}-registry"
+  user  = aws_iam_user.registry.name
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "s3:*"
+      ],
+      "Effect": "Allow",
+      "Resource": "${aws_s3_bucket.registry.arn}
+    }
+  ]
+}
+EOF
+}
+
 resource "helm_release" "this" {
   count = 1 - local.argocd_enabled
   depends_on = [
@@ -42,6 +85,7 @@ resource "local_file" "this" {
 
 locals {
   argocd_enabled = length(var.argocd) > 0 ? 1 : 0
+  s3_enabled     = var.storage == "s3" ? 0 : 1
   namespace      = coalescelist(kubernetes_namespace.this, [{ "metadata" = [{ "name" = var.namespace }] }])[0].metadata[0].name
 
   name       = "proxy"
@@ -88,6 +132,18 @@ locals {
 
   conf = merge(local.conf_defaults, var.conf)
   conf_defaults = merge(
+    var.storage == "filesystem" ? {
+      "persistence.enabled" = true
+      "persistence.size"    = "10Gi"
+    } : {},
+    var.storage == "s3" ? {
+      "persistence.enabled"  = false
+      "s3.region"            = aws_s3_bucket.registry.region
+      "s3.bucket"            = aws_s3_bucket.registry.id
+      "s3.secure"            = true
+      "secrets.s3.accessKey" = aws_iam_access_key.registry.id
+      "secrets.s3.secretKey" = aws_iam_access_key.registry.secret
+    } : {},
     {
       "ingress.enabled"                                      = true
       "ingress.hosts[0]"                                     = "docker-hub-mirror.${var.domains[0]}"
@@ -96,7 +152,6 @@ locals {
       "ingress.annotations.cert-manager\\.io/cluster-issuer" = "letsencrypt-prod"
       "ingress.annotations.kubernetes\\.io/tls-acme"         = "true"
       "ingress.annotations.kubernetes\\.io/ingress\\.class"  = "internal"
-      "persistence.size"                                     = "10Gi"
       "configData.proxy.remoteurl"                           = "https://registry-1.docker.io"
   })
 }
