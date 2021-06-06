@@ -31,13 +31,13 @@ resource "aws_iam_user" "registry" {
 
 resource "aws_iam_access_key" "registry" {
   count = 1 - local.s3_enabled
-  user  = aws_iam_user.registry.name
+  user  = aws_iam_user.registry[0].name
 }
 
 resource "aws_iam_user_policy" "registry" {
   count = 1 - local.s3_enabled
   name  = "${var.cluster_name}-registry"
-  user  = aws_iam_user.registry.name
+  user  = aws_iam_user.registry[0].name
 
   policy = <<EOF
 {
@@ -48,7 +48,7 @@ resource "aws_iam_user_policy" "registry" {
         "s3:*"
       ],
       "Effect": "Allow",
-      "Resource": "${aws_s3_bucket.registry.arn}
+      "Resource": "${aws_s3_bucket.registry[0].arn}
     }
   ]
 }
@@ -138,11 +138,11 @@ locals {
     } : {},
     var.storage == "s3" ? {
       "persistence.enabled"  = false
-      "s3.region"            = aws_s3_bucket.registry.region
-      "s3.bucket"            = aws_s3_bucket.registry.id
+      "s3.region"            = aws_s3_bucket.registry[0].region
+      "s3.bucket"            = aws_s3_bucket.registry[0].id
       "s3.secure"            = true
-      "secrets.s3.accessKey" = aws_iam_access_key.registry.id
-      "secrets.s3.secretKey" = aws_iam_access_key.registry.secret
+      "secrets.s3.accessKey" = aws_iam_access_key.registry[0].id
+      "secrets.s3.secretKey" = aws_iam_access_key.registry[0].secret
     } : {},
     {
       "ingress.enabled"                                      = true
