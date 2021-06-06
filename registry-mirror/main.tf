@@ -133,10 +133,12 @@ locals {
   conf = merge(local.conf_defaults, var.conf)
   conf_defaults = merge(
     var.storage == "filesystem" ? {
+      "storage"             = "filesystem"
       "persistence.enabled" = true
       "persistence.size"    = "10Gi"
     } : {},
     var.storage == "s3" ? {
+      "storage"              = "s3"
       "persistence.enabled"  = false
       "s3.region"            = aws_s3_bucket.registry[0].region
       "s3.bucket"            = aws_s3_bucket.registry[0].id
