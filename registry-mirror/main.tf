@@ -48,7 +48,7 @@ resource "aws_iam_user_policy" "registry" {
         "s3:*"
       ],
       "Effect": "Allow",
-      "Resource": "${aws_s3_bucket.registry[0].arn}
+      "Resource": "${aws_s3_bucket.registry[0].arn}"
     }
   ]
 }
