@@ -13,7 +13,7 @@ resource "kubernetes_namespace" "this" {
 }
 
 resource "aws_s3_bucket" "registry" {
-  count         = 1 - local.storage
+  count         = 1 - local.s3_enabled
   bucket        = "registry-mirror-bucket"
   acl           = "private"
   force_destroy = true
@@ -22,7 +22,7 @@ resource "aws_s3_bucket" "registry" {
 }
 
 resource "aws_iam_user" "registry" {
-  count = 1 - local.storage
+  count = 1 - local.s3_enabled
   name  = "${var.cluster_name}-registry"
   path  = "/system/"
 
@@ -30,12 +30,12 @@ resource "aws_iam_user" "registry" {
 }
 
 resource "aws_iam_access_key" "registry" {
-  count = 1 - local.storage
+  count = 1 - local.s3_enabled
   user  = aws_iam_user.registry.name
 }
 
 resource "aws_iam_user_policy" "registry" {
-  count = 1 - local.storage
+  count = 1 - local.s3_enabled
   name  = "${var.cluster_name}-registry"
   user  = aws_iam_user.registry.name
 
