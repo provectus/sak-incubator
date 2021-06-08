@@ -148,9 +148,9 @@ locals {
     } : {},
     {
       "ingress.enabled"                                      = true
-      "ingress.hosts[0]"                                     = "docker-hub-mirror.${var.domains[0]}"
-      "ingress.tls[0].secretName"                            = "docker-hub-mirror-tls"
-      "ingress.tls[0].hosts[0]"                              = "docker-hub-mirror.${var.domains[0]}"
+      "ingress.hosts[0]"                                     = "registry.${var.domains[0]}"
+      "ingress.tls[0].secretName"                            = "registry-tls"
+      "ingress.tls[0].hosts[0]"                              = "registry.${var.domains[0]}"
       "ingress.annotations.cert-manager\\.io/cluster-issuer" = "letsencrypt-prod"
       "ingress.annotations.kubernetes\\.io/tls-acme"         = "true"
       "ingress.annotations.kubernetes\\.io/ingress\\.class"  = "internal"
