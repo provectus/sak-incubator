@@ -1,5 +1,6 @@
 data "aws_eks_cluster" "this" {
   name = var.cluster_name
+}
   
 data "aws_region" "current" {}
   
@@ -20,7 +21,6 @@ resource "helm_release" "keyclok" {
   ]
   repository    = local.repository
   name          = var.release_name
-  chart         = var.chart_name
   chart_version = var.chart_version
   namespace     = local.namespace
   recreate_pods = true
