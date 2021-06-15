@@ -166,8 +166,8 @@ locals {
   )
 
   repository    = "https://charts.bitnami.com/bitnami"
-  name                              = "argocd"
-  chart                             = "argo-cd"
+  name                              = "keycloak"
+  chart                             = "keycloak"
   conf          = merge(local.conf_defaults, var.conf)
   conf_defaults = merge({
     "rbac.create"                                               = true,
