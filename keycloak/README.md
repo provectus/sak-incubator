@@ -1,3 +1,4 @@
+
 It is a terraform module to deploy keycloak to EKS with ArgoCD. To integrate this module with our swiss-army-kube project, we add the module to the main terraform file:
 
 ## Example how add with module
@@ -54,3 +55,11 @@ No modules.
 ## Outputs
 
 No outputs.
+It is a etrraform module to deploy keycloak to EKS with ArgoCD.
+to integrate this module with our swiss-army-kube project, we add the module in main terraform file:
+
+   
+  
+To retrive keyclock password:
+aws --region <your-region> ssm get-parameter  --with-decryption --name /<your-cluster-name>/keyclock/password | jq -r '.Parameter.Value' 
+

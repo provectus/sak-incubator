@@ -4,7 +4,7 @@ variable "argocd" {
   default     = {}
 }
 
-variable "namespace" {
+variable "namespace" {  
   type        = string
   default     = ""
   description = "A name of the existing namespace"
@@ -13,6 +13,7 @@ variable "namespace" {
 variable "namespace_name" {
   type        = string
   default     = "oauth"
+  default     = ""
   description = "A name of namespace for creating"
 }
 
@@ -38,6 +39,19 @@ variable "domains" {
   type        = list(string)
   default     = ["local"]
   description = "A list of domains to use for ingresses"
+  default     = ""
+}
+
+variable "chart_name" {
+  type        = string
+  description = "A chart name"
+  default     = ""
+}
+
+variable "release_name" {
+  type        = string
+  description = "A release name"
+  default     = ""
 }
 
 variable "conf" {
