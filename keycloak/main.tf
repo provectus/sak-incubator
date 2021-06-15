@@ -19,9 +19,11 @@ resource "helm_release" "keyclok" {
   depends_on = [
     var.module_depends_on
   ]
+  
+  name          = local.name
   repository    = local.repository
-  name          = var.release_name
-  chart_version = var.chart_version
+  chart         = local.chart
+  version       = var.chart_version
   namespace     = local.namespace
   recreate_pods = true
   timeout       = 1200
@@ -164,6 +166,8 @@ locals {
   )
 
   repository    = "https://charts.bitnami.com/bitnami"
+  name                              = "argocd"
+  chart                             = "argo-cd"
   conf          = merge(local.conf_defaults, var.conf)
   conf_defaults = merge({
     "rbac.create"                                               = true,
