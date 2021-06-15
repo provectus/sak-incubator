@@ -30,9 +30,15 @@ variable "cluster_name" {
 variable "chart_version" {
   type        = string
   description = "A Helm Chart version"
-  default     = ""
+   default     = "3.0.3"
 }
 
+variable "domains" {
+  type        = list(string)
+  default     = ["local"]
+  description = "A list of domains to use for ingresses"
+  default     = ""
+}
 
 variable "chart_name" {
   type        = string
