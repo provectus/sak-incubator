@@ -2,8 +2,9 @@ variable "argocd" {
   type        = map(string)
   description = "A set of values for enabling deployment through ArgoCD"
   default     = {}
-  
-  variable "namespace" {
+}
+
+variable "namespace" {  
   type        = string
   default     = ""
   description = "A name of the existing namespace"
@@ -11,6 +12,7 @@ variable "argocd" {
 
 variable "namespace_name" {
   type        = string
+  default     = "oauth"
   default     = ""
   description = "A name of namespace for creating"
 }
@@ -30,7 +32,7 @@ variable "cluster_name" {
 variable "chart_version" {
   type        = string
   description = "A Helm Chart version"
-   default     = "3.0.3"
+  default     = "3.0.3"
 }
 
 variable "domains" {
