@@ -4,7 +4,13 @@ variable "argocd" {
   default     = {}
 }
 
-variable "namespace" {  
+variable "conf" {
+  type        = map(string)
+  description = "A custom configuration for deployment"
+  default     = {}
+}
+
+variable "namespace" {
   type        = string
   default     = ""
   description = "A name of the existing namespace"
@@ -12,8 +18,7 @@ variable "namespace" {
 
 variable "namespace_name" {
   type        = string
-  default     = "oauth"
-  default     = ""
+  default     = "keycloak"
   description = "A name of namespace for creating"
 }
 
@@ -29,33 +34,50 @@ variable "cluster_name" {
   description = "A name of the Amazon EKS cluster"
 }
 
-variable "chart_version" {
-  type        = string
-  description = "A Helm Chart version"
-  default     = "3.0.3"
-}
-
 variable "domains" {
   type        = list(string)
   default     = ["local"]
   description = "A list of domains to use for ingresses"
-  default     = ""
 }
 
-variable "chart_name" {
+variable "chart_version" {
   type        = string
-  description = "A chart name"
-  default     = ""
+  description = "A Helm Chart version"
+  default     = "3.1.1"
 }
 
-variable "release_name" {
-  type        = string
-  description = "A release name"
-  default     = ""
-}
-
-variable "conf" {
+variable "tags" {
   type        = map(string)
-  description = "A custom configuration for deployment"
   default     = {}
+  description = "A tags for attaching to new created AWS resources"
+}
+
+variable "keycloak_password" {
+  type        = string
+  description = "Password for keycloak admin"
+  default     = ""
+}
+
+variable "keycloak_google_auth" {
+  type        = string
+  description = "Enables Google auth for keycloak"
+  default     = false
+}
+
+variable "keycloak_client_id" {
+  type        = string
+  description = "The id of the client for keycloak Google auth"
+  default     = ""
+}
+
+variable "keycloak_client_secret" {
+  type        = string
+  description = "The token of the client for keycloak Google auth"
+  default     = ""
+}
+
+variable "keycloak_allowed_domains" {
+  type        = string
+  description = "Allowed domain for keycloak Google auth"
+  default     = "local"
 }
