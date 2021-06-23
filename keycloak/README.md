@@ -4,11 +4,10 @@ It is a terraform module to deploy keycloak to EKS with ArgoCD. To integrate thi
 ## Example how add with module
 ```
 module "keycloak" {
-  depends_on   = [module.argocd]
-  source       = "../../modules/keycloak"
-  cluster_name = module.kubernetes.cluster_name
-  argocd       = module.argocd.state
-  domains      = local.domain
+  source        = "git::https://github.com/provectus/sak-keycloak.git"
+  cluster_name      = module.kubernetes.cluster_name
+  argocd            = module.argocd.state
+  domains           = local.domain
 }
 ```
 
