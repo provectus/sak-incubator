@@ -20,24 +20,30 @@ SAK Modules:
 
 Some of the SAK modules are core - you can't deploy a cluster without them. Core modules are in bold in the list below. Other modules are optional.
 
-*  [airflow](https://github.com/provectus/swiss-army-kube/tree/master/modules/airflow) 
-*  [cicd](https://github.com/provectus/swiss-army-kube/tree/master/modules/cicd)
-    + [argo](https://github.com/provectus/swiss-army-kube/tree/master/modules/cicd/argo)
-    + [jenkins](https://github.com/provectus/swiss-army-kube/tree/master/modules/cicd/jenkins)
-*  [ingress](https://github.com/provectus/swiss-army-kube/tree/master/modules/ingress)
-    + [alb-ingress](https://github.com/provectus/swiss-army-kube/tree/master/modules/ingress/alb-ingress)
-    + [nginx](https://github.com/provectus/swiss-army-kube/tree/master/modules/ingress/nginx)
-*   [kubeflow](https://github.com/provectus/swiss-army-kube/tree/master/modules/kubeflow)
-*   **[kubernetes](https://github.com/provectus/swiss-army-kube/tree/master/modules/kubernetes)**
-*   [logging](https://github.com/provectus/swiss-army-kube/tree/master/modules/logging)
-    + [efk](https://github.com/provectus/swiss-army-kube/tree/master/modules/logging/efk)
-    + [loki](https://github.com/provectus/swiss-army-kube/tree/master/modules/logging/loki)
-*   [monitoring](https://github.com/provectus/swiss-army-kube/tree/master/modules/monitoring)
-    + [prometheus](https://github.com/provectus/swiss-army-kube/tree/master/modules/monitoring/prometheus)
-*   **[network](https://github.com/provectus/swiss-army-kube/tree/master/modules/network)**
-*   [rds](https://github.com/provectus/swiss-army-kube/tree/master/modules/rds) 
-*   [scaling](https://github.com/provectus/swiss-army-kube/tree/master/modules/scaling)
-*   [storage](https://github.com/provectus/swiss-army-kube/tree/master/modules/storage)
+*  [airflow](./airflow) 
+*  [cicd](./cicd)
+    + [argo](./cicd/argo)
+    + [jenkins](./cicd/jenkins)
+    + [github-actions](./cicd/github-actions)
+*  [ingress](./ingress)
+    + [oauth](./oauth)
+*   [kfserving](./kfserving)
+*   [kubeflow-operator](./kubeflow-operator)
+*   [kubeflow-prod-default](./kubeflow-prod-default)
+*   [kubeflow-profiles](./kubeflow-profiles)
+*   **[kubernetes](https://github.com/provectus/sak-kubernetes)**
+*   [logging](./logging)
+    + [efk](./logging/efk)
+    + [loki](./logging/loki)
+    + [aws-for-fluent-bit](./logging/aws-for-fluent-bit)
+*   [mlflow](./mlflow)
+*   [monitoring](./monitoring)
+    + [prometheus](https://github.com/provectus/sak-prometheus)
+*   **[network](https://github.com/provectus/sak-vpc)**
+*   [rds](./rds) 
+*   [registry-mirror](./registry-mirror)
+*   [scaling](https://github.com/provectus/sak-scaling)
+*   [storage](./storage)
     + [efs](https://github.com/provectus/swiss-army-kube/tree/master/modules/storage/efs)
     + [fsx](https://github.com/provectus/swiss-army-kube/tree/master/modules/storage/fsx)
 *  **[system](https://github.com/provectus/swiss-army-kube/tree/master/modules/system)**
@@ -54,6 +60,9 @@ Kubernetes module is used to deploy the EKS cluster in Amazon. It creates an aut
 Network module is a VPC module for creating networks, load balancers, and gateways.
 
 #### 3. System
+
+>:warning: some modules migrate to their repository (like sak-cert-manager, sak-external-dns)
+
 
 System module configures an EKS cluster with addons and Helm charts - cert-manager (ExternalDNS), external-dns, saled-secrets, kube-state-metrics. Cert-manager is a native Kubernetes certificate management addon to automate issuance and management of TLS certificates. ExternalDNS addon makes Kubernetes resources discoverable via public DNS servers. kube-state-metrics Helm Chart listens to the Kubernetes API server and generates metrics about the state of the objects (deployments, nodes and pods). sealed-secrets manages secretes. 
 
