@@ -1,0 +1,39 @@
+name: ci
+on:
+  pull_request:
+    paths:
+    - '**.tf'
+    - '**.tfvars'
+    - '**.tfvars.json'
+env:
+  TERRAFORM_VERSION: "0.14.4"
+
+jobs:
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@master
+
+      # Install latest Terraform manually as
+      #  Docker-based GitHub Actions are
+      #  slow due to lack of caching
+      # Note: Terraform is not needed for tflint
+      - name: Install Terraform
+        run: |
+          brew install tfenv
+          tfenv install ${TERRAFORM_VERSION}
+
+      # More complex example
+      - name: tflint
+        uses: reviewdog/action-tflint@master
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review # Optional. Change reporter
+          fail_on_error: "true" # Optional. Fail action if errors are found
+          filter_mode: "added" # Optional. Check all files, not just the diff
+          level: "error"
+          flags: "--module --loglevel=error -c ../../.tflint.hcl" # Optional. Add custom tflint flags
+
