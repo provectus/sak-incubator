@@ -1,4 +1,4 @@
-name: ci
+name: tflint
 on:
   pull_request:
     paths:
