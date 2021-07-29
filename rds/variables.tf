@@ -170,3 +170,8 @@ variable "worker_security_group_id" {
 
 }
 
+variable "rds_cloudwatch_logging_enabled" {
+  description = "Enable cloudwatch logs"
+  type        = bool
+  default     = false
+}

@@ -3,6 +3,37 @@ data "aws_subnet_ids" "all" {
   vpc_id = var.vpc_id
 }
 
+locals {
+  db_engine_log_group_mapping = var.rds_cloudwatch_logging_enabled ? {
+    postgres       = ["postgres", "upgrade"]
+    mariadb        = ["audit", "general", "slowquery", "error"]
+    oracle-ee      = ["audit", "alert", "trace", "listener"]
+    oracle-ee-cdb  = ["audit", "alert", "trace", "listener"]
+    oracle-se2     = ["audit", "alert", "trace", "listener"]
+    oracle-se2-cdb = ["audit", "alert", "trace", "listener"]
+    mysql          = ["audit", "general", "slowquery", "error"]
+    sqlserver-ee   = ["error", "agent"]
+    sqlserver-se   = ["error", "agent"]
+    sqlserver-ex   = ["error", "agent"]
+    sqlserver-web  = ["error", "agent"]
+
+
+    } : {
+    postgres       = []
+    mariadb        = []
+    oracle-ee      = []
+    oracle-ee-cdb  = []
+    oracle-se2     = []
+    oracle-se2-cdb = []
+    mysql          = []
+    sqlserver-ee   = []
+    sqlserver-se   = []
+    sqlserver-ex   = []
+    sqlserver-web  = []
+
+  }
+}
+
 resource "aws_security_group" "eks_workers" {
   name        = "${var.cluster_name}-rds-access-from-eks"
   description = "Allow EKS workers access to RDS databases"
@@ -77,7 +108,7 @@ module "db" {
     },
   )
 
-  enabled_cloudwatch_logs_exports = var.rds_enabled_cloudwatch_logs_exports
+  enabled_cloudwatch_logs_exports = (length(var.rds_enabled_cloudwatch_logs_exports) != 0 && var.rds_cloudwatch_logging_enabled) ? var.rds_enabled_cloudwatch_logs_exports : lookup(local.db_engine_log_group_mapping, var.rds_database_engine, [])
 
   # DB subnet group
   subnet_ids = var.subnets
