@@ -24,3 +24,10 @@ variable "trusted_role_arns" {
   description = "ARNs of roles that are allowed to assume the role for read/write access to the S3 bucket"
   default     = []
 }
+
+
+variable "s3_cloudwatch_logging_enabled" {
+  type        = bool
+  default     = false
+  description = "By making it true, logs will be stored to cloudwatch with help of cloudtrail"
+}
