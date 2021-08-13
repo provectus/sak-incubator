@@ -50,3 +50,10 @@ variable "self_signed_certificate_validity_period" {
   description = "Number of hours the self-signed certificate should be valid"
   default     = 2400 //100 days
 }
+
+
+variable "enable_cloudtrail_logging" {
+  type        = bool
+  description = "Enable cloudtrail by changing this to true"
+  default     = false
+}
