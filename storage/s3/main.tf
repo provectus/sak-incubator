@@ -85,7 +85,7 @@ resource "aws_iam_role" "cloudtrail_to_cloudwatch" {
   }
 }
 
-resource "aws_s3_bucket" "kubeflow" {
+resource "aws_s3_bucket" "main" {
 
   bucket = var.s3_bucket_name
   tags   = var.tags
@@ -117,7 +117,7 @@ resource "aws_cloudtrail" "s3" {
 
     data_resource {
       type   = "AWS::S3::Object"
-      values = ["${aws_s3_bucket.kubeflow.arn}/"]
+      values = ["${aws_s3_bucket.main.arn}/"]
     }
   }
 
@@ -148,13 +148,13 @@ resource "aws_iam_user_policy" "s3_user" {
             "Sid": "ListObjectsInBucket",
             "Effect": "Allow",
             "Action": ["s3:ListBucket"],
-            "Resource": ["${aws_s3_bucket.kubeflow.arn}"]
+            "Resource": ["${aws_s3_bucket.main.arn}"]
         },
         {
             "Sid": "AllObjectActions",
             "Effect": "Allow",
             "Action": "s3:*Object",
-            "Resource": ["${aws_s3_bucket.kubeflow.arn}/*"]
+            "Resource": ["${aws_s3_bucket.main.arn}/*"]
         }
     ]
 }
@@ -178,13 +178,13 @@ resource "aws_iam_policy" "s3_role" {
             "Sid": "ListObjectsInBucket",
             "Effect": "Allow",
             "Action": ["s3:ListBucket"],
-            "Resource": ["${aws_s3_bucket.kubeflow.arn}"]
+            "Resource": ["${aws_s3_bucket.main.arn}"]
         },
         {
             "Sid": "AllObjectActions",
             "Effect": "Allow",
             "Action": "s3:*Object",
-            "Resource": ["${aws_s3_bucket.kubeflow.arn}/*"]
+            "Resource": ["${aws_s3_bucket.main.arn}/*"]
         }
     ]
 }
