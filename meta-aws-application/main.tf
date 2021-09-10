@@ -86,9 +86,7 @@ locals {
       }
       "syncPolicy" = {
         "syncOptions" = [
-          {
-            "CreateNamespace" = true
-          }
+          "CreateNamespace=true"
         ]
         "automated" = {
           "prune"    = true
