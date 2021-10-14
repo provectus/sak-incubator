@@ -40,5 +40,5 @@ This command will put wg.conf file in current folder, just import it with wiregu
 Deploy only default resources, all dependencies must be provided explicitly.
 
 ## Knowen issues
-When you add user to group, the WG ec2 instance will be rebooted, the other users which already connected to the server will be interrupted. 
+When you add user to WG group, the WG ec2 instance will be rebooted, the other users which already connected to the server will be interrupted. 
 

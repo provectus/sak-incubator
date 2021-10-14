@@ -37,9 +37,8 @@ locals {
 }
 
 resource "aws_iam_group" "wireguard" {
-  count = data.external.is-wg-group-exist == "true" ? 0 : 1
+  count = data.external.is-wg-group-exist.result.exist == "true" ? 0 : 1
   name  = var.wg_group_name
-  path  = "${local.prefix}/"
 }
 
 module "vpc" {

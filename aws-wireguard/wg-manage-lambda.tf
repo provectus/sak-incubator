@@ -59,7 +59,7 @@ resource "aws_iam_policy" "wg_manage" {
             "Action": [
                 "iam:GetGroup"
             ],
-            "Resource": "arn:aws:iam::${local.account}:group${local.prefix}/${var.wg_group_name}"
+            "Resource": "arn:aws:iam::${local.account}:group/${var.wg_group_name}"
         },
         {
             "Effect": "Allow",
