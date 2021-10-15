@@ -1,0 +1,7 @@
+.envrc
+.terraform
+.terraform*
+terraform.tfstate
+terraform.tfstate.backup
+builds
+.idea
