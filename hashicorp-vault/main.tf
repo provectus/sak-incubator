@@ -16,10 +16,6 @@ listener "tcp" {
 }
 EOT
 
-  s3_storage_conf = <<EOT
-
-EOT
-
   file_storage_conf = {
     "server.volumes[0].name"                            = var.file_storage_name,
     "server.volumes[0].persistentVolumeClaim.claimName" = var.file_storage_pvc_name,
@@ -132,7 +128,7 @@ resource "helm_release" "this" {
     }
   }
   dynamic "set" {
-    for_each = var.s3_storage ? [local.s3_storage_conf] : []
+    for_each = var.s3_storage ? [local.init_conf] : []
     content {
       name  = "server.standalone.config"
       value = <<EOT
