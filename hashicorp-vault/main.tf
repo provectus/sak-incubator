@@ -74,21 +74,24 @@ resource "aws_iam_user_policy" "this" {
 }
 
 resource "aws_iam_policy_attachment" "this" {
+  count      = var.s3_storage ? 1 : 0
   name       = "test-attachment"
   users      = [aws_iam_user.this.0.name]
   roles      = []
   groups     = []
-  policy_arn = aws_iam_policy.this.arn
+  policy_arn = aws_iam_policy.this.0.arn
 }
 
 
 resource "aws_iam_policy" "this" {
+  count       = var.s3_storage ? 1 : 0
   name_prefix = "vault-kms"
   description = "EKS VAULT policy for cluster"
-  policy      = data.aws_iam_policy_document.this.json
+  policy      = data.aws_iam_policy_document.this.0.json
 }
 
 data "aws_iam_policy_document" "this" {
+  count = var.s3_storage ? 1 : 0
   statement {
     sid    = "VaultOwn"
     effect = "Allow"
@@ -152,7 +155,7 @@ locals {
     "kind"       = "Application"
     "metadata" = {
       "name"      = local.name
-      "namespace" = "vault"
+      "namespace" = var.argocd.namespace
     }
     "spec" = {
       "destination" = {
@@ -207,11 +210,6 @@ storage "file" {
 EOT
     } : {},
     {
-      "rbac.create"               = true
-      "resources.limits.cpu"      = "100m",
-      "resources.limits.memory"   = "300Mi",
-      "resources.requests.cpu"    = "100m",
-      "resources.requests.memory" = "300Mi",
   })
 
   vault_conf = <<EOT
