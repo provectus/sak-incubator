@@ -6,32 +6,6 @@ data "aws_eks_cluster_auth" "cluster" {
   name = var.cluster_name
 }
 
-locals {
-  vault_conf = <<EOT
-ui = true
-listener "tcp" {
-  tls_disable = 1
-  address = "[::]:8200"
-  cluster_address = "[::]:8201"
-}
-EOT
-
-  file_storage_conf = {
-    "server.volumes[0].name"                            = var.file_storage_name,
-    "server.volumes[0].persistentVolumeClaim.claimName" = var.file_storage_pvc_name,
-    "server.standalone.config"                          = <<EOT
-    ${local.vault_conf}
-    storage "file" {
-      path = "/vault/data"
-    }
-EOT
-  }
-
-  init_conf = {
-    "server.ui.enabled" = true
-  }
-}
-
 provider "helm" {
   kubernetes {
     host                   = data.aws_eks_cluster.cluster.endpoint
@@ -63,6 +37,7 @@ resource "aws_kms_key" "this" {
   deletion_window_in_days = 10
 }
 
+
 resource "aws_s3_bucket" "this" {
   count  = var.s3_create_bucket ? 1 : 0
   bucket = var.s3_bucket_name
@@ -92,10 +67,38 @@ resource "aws_iam_user_policy" "this" {
           "s3:*"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:s3:::${var.s3_bucket_name}"
+        Resource = "*"
       },
     ]
   })
+}
+
+resource "aws_iam_policy_attachment" "this" {
+  name       = "test-attachment"
+  users      = [aws_iam_user.this.0.name]
+  roles      = []
+  groups     = []
+  policy_arn = aws_iam_policy.this.arn
+}
+
+
+resource "aws_iam_policy" "this" {
+  name_prefix = "vault-kms"
+  description = "EKS VAULT policy for cluster"
+  policy      = data.aws_iam_policy_document.this.json
+}
+
+data "aws_iam_policy_document" "this" {
+  statement {
+    sid    = "VaultOwn"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
+    ]
+
+    resources = [aws_kms_key.this.0.arn]
+  }
 }
 
 resource "aws_iam_user" "this" {
@@ -111,27 +114,79 @@ resource "aws_iam_access_key" "this" {
   user  = aws_iam_user.this.0.name
 }
 
+resource "local_file" "this" {
+  count    = local.argocd_enabled
+  content  = yamlencode(local.app)
+  filename = "${var.argocd.path}/${local.name}.yaml"
+}
+
 
 resource "helm_release" "this" {
+  count      = 1 - local.argocd_enabled
   depends_on = [kubernetes_namespace.this]
-  name       = var.chart_name
-  repository = "https://helm.releases.hashicorp.com"
-  chart      = "vault"
-  namespace  = var.chart_namespace
+  name       = local.name
+  repository = local.repository
+  chart      = local.chart
+  namespace  = local.namespace
 
   dynamic "set" {
-    for_each = local.init_conf
+    for_each = local.conf
 
     content {
       name  = set.key
       value = set.value
     }
   }
-  dynamic "set" {
-    for_each = var.s3_storage ? [local.init_conf] : []
-    content {
-      name  = "server.standalone.config"
-      value = <<EOT
+}
+
+locals {
+  name           = var.chart_name
+  repository     = "https://helm.releases.hashicorp.com"
+  chart          = "vault"
+  version        = var.chart_version
+  namespace      = var.chart_namespace
+  argocd_enabled = length(var.argocd) > 0 ? 1 : 0
+
+  app = {
+    "apiVersion" = "argoproj.io/v1alpha1"
+    "kind"       = "Application"
+    "metadata" = {
+      "name"      = local.name
+      "namespace" = "vault"
+    }
+    "spec" = {
+      "destination" = {
+        "namespace" = local.namespace
+        "server"    = "https://kubernetes.default.svc"
+      }
+      "project" = "default"
+      "source" = {
+        "repoURL"        = local.repository
+        "targetRevision" = local.version
+        "chart"          = local.chart
+        "helm" = {
+          "parameters" = values({
+            for key, value in local.conf :
+            key => {
+              "name"  = key
+              "value" = tostring(value)
+            }
+          })
+        }
+      }
+      "syncPolicy" = {
+        "automated" = {
+          "prune"    = true
+          "selfHeal" = true
+        }
+      }
+    }
+  }
+
+  conf = merge(local.conf_defaults, var.conf)
+  conf_defaults = merge(
+    var.s3_storage ? {
+      "server.standalone.config" = <<EOT
 ${local.vault_conf}
 storage "s3" {
   access_key = "${aws_iam_access_key.this.0.id}"
@@ -140,14 +195,31 @@ storage "s3" {
   region     = "${var.s3_bucket_region}"
 }
 EOT
-    }
-  }
+    } : {},
+    var.file_storage ? {
+      "server.volumes[0].name"                            = var.file_storage_name,
+      "server.volumes[0].persistentVolumeClaim.claimName" = var.file_storage_pvc_name,
+      "server.standalone.config"                          = <<EOT
+${local.vault_conf}
+storage "file" {
+  path = "/vault/data"
+}
+EOT
+    } : {},
+    {
+      "rbac.create"               = true
+      "resources.limits.cpu"      = "100m",
+      "resources.limits.memory"   = "300Mi",
+      "resources.requests.cpu"    = "100m",
+      "resources.requests.memory" = "300Mi",
+  })
 
-  dynamic "set" {
-    for_each = var.file_storage ? local.file_storage_conf : {}
-    content {
-      name  = set.key
-      value = set.value
-    }
-  }
+  vault_conf = <<EOT
+ui = true
+listener "tcp" {
+  tls_disable = 1
+  address = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+EOT
 }

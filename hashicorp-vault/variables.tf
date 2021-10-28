@@ -3,6 +3,12 @@ variable "cluster_name" {
   description = "A name of the EKS cluster"
 }
 
+variable "chart_version" {
+  type        = string
+  description = "A Helm Chart version"
+  default     = "0.17.0"
+}
+
 variable "chart_name" {
   type        = string
   default     = "hashicorp-vault"
@@ -19,6 +25,12 @@ variable "chart_create_namespace" {
   type        = bool
   default     = false
   description = "A option for creating Kubernetes namespace"
+}
+
+variable "conf" {
+  type        = map(string)
+  description = "A custom configuration for deployment"
+  default     = {}
 }
 
 # https://www.vaultproject.io/docs/configuration/storage/s3
@@ -63,6 +75,13 @@ variable "file_storage_pvc_name" {
   default     = "efs-pvc"
   description = "PVC name for Vault file storage type"
 }
+
+variable "argocd" {
+  type        = map(string)
+  description = "A set of values for enabling deployment through ArgoCD"
+  default     = {}
+}
+
 
 variable "tags" {
   type        = map(string)
