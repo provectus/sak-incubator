@@ -104,6 +104,7 @@ data "aws_iam_policy_document" "this" {
   }
 }
 
+# TODO test usage of iam role and try to read credentials from secret
 resource "aws_iam_user" "this" {
   count = var.s3_storage ? 1 : 0
   name  = "${var.cluster_name}-vault"

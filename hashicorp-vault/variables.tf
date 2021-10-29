@@ -82,7 +82,6 @@ variable "argocd" {
   default     = {}
 }
 
-
 variable "tags" {
   type        = map(string)
   default     = {}

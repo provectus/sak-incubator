@@ -9,7 +9,7 @@ In this storage type Vault will use S3 bucket. If `s3_create_bucket` set to true
 module "vault" {
   source           = "../hashicorp-vault/" # path of module folder
   cluster_name     = "swiss-army-kube"
-  aws_region       = "eu-north-1"
+  argocd           = module.argocd.state
   s3_storage       = true
   s3_create_bucket = true
   s3_bucket_name   = "sak-vault-test-bucket"
@@ -22,6 +22,7 @@ module "vault" {
 module "efs" {
   source                 = "../storage/efs/" # path of module folder
   cluster_name           = "swiss-army-kube"
+  aws_region             = "eu-north-1"
   efs_name               = "sak-efs-folder"
   efs_folder_path        = "/vault"
   pvc_name               = "efs-pvc"
@@ -33,6 +34,7 @@ module "vault" {
   source                = "../hashicorp-vault/" # path of module folder
   cluster_name          = "swiss-army-kube"
   chart_namespace       = "vault"
+  argocd                = module.argocd.state
   file_storage          = true
   file_storage_name     = "efs"
   file_storage_pvc_name = module.efs.pvc_name
@@ -61,6 +63,8 @@ terraform >= 0.15
 | cluster\_name | A name of the EKS cluster | `string` | n/a | yes |
 | chart\_name | A name of the Vault chart | `string` | `"hashicorp-vault"` | no |
 | chart\_create\_namespace | A option for creating Kubernetes namespace | `bool` | `false` | no |
+| argocd | A set of values for enabling deployment through ArgoCD | `map()` | `{}` | no |
+| conf | A set of parameters to pass to Hashicorp Vault chart | `map()` | `{}` | no |
 | s3\_storage | A option to use Vault S3 storage type | `bool` | `false` | yes |
 | s3\_create\_bucket | A option for creating S3 bucket | `bool` | `false` | yes |
 | s3\_bucket\_name | A bucket name for Vault S3 storage type | `string` | `"swiss-army-kube-test-vault"` | yes |
