@@ -8,6 +8,7 @@ Module creates EFS in AWS for future usage inside PV/PVC. Also module install he
 module "efs" {
   source       = "../storage/efs/" # path of module folder
   cluster_name = "swiss-army-kube"
+  argocd       = {}
   aws_region   = "eu-north-1"
   efs_name     = "sak-efs-folder"
 }

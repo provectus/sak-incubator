@@ -52,19 +52,6 @@ resource "aws_efs_file_system" "this" {
   tags       = var.tags
 }
 
-resource "aws_efs_access_point" "this" {
-  file_system_id = aws_efs_file_system.this.id
-  root_directory {
-    creation_info {
-      owner_gid   = var.efs_owner_gid
-      owner_uid   = var.efs_owner_uid
-      permissions = var.efs_folder_permissions
-    }
-    path = var.efs_folder_path
-  }
-  tags = var.tags
-}
-
 resource "aws_efs_mount_target" "this" {
   for_each        = { for subnet in data.aws_subnets.this.ids : subnet => subnet }
   file_system_id  = aws_efs_file_system.this.id
@@ -88,54 +75,19 @@ resource "aws_security_group" "this" {
   vpc_id = data.aws_vpc.this.id
 }
 
-resource "helm_release" "aws_efs_csi_driver" {
-  name       = "aws-efs-csi-driver"
-  repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver"
-  chart      = "aws-efs-csi-driver"
-  namespace  = "kube-system"
-
-  set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = aws_iam_role.this.arn
-  }
-}
-
-resource "kubernetes_persistent_volume" "this" {
-  depends_on = [helm_release.aws_efs_csi_driver]
-  metadata {
-    name = var.pv_name
-  }
-  spec {
-    capacity = {
-      storage = var.pv_size
-    }
-    access_modes = ["ReadWriteMany"]
-
-    storage_class_name = kubernetes_storage_class.this.metadata.0.name
-    persistent_volume_source {
-      csi {
-        driver        = "efs.csi.aws.com"
-        volume_handle = "${aws_efs_file_system.this.id}::${aws_efs_access_point.this.id}"
-      }
-    }
-  }
-}
-
 resource "kubernetes_persistent_volume_claim" "this" {
-  depends_on = [kubernetes_persistent_volume.this]
   metadata {
     name      = var.pvc_name
     namespace = var.namespace
   }
   spec {
-    access_modes = ["ReadWriteMany"]
+    access_modes       = ["ReadWriteMany"]
+    storage_class_name = kubernetes_storage_class.this.metadata.0.name
     resources {
       requests = {
         storage = var.pvc_size
       }
     }
-    storage_class_name = kubernetes_storage_class.this.metadata.0.name
-    volume_name        = kubernetes_persistent_volume.this.metadata.0.name
   }
 }
 
@@ -145,7 +97,12 @@ resource "kubernetes_storage_class" "this" {
   }
   storage_provisioner = "efs.csi.aws.com"
   reclaim_policy      = "Retain"
-  mount_options       = ["file_mode=0700", "dir_mode=0777", "mfsymlinks", "uid=1000", "gid=1000", "nobrl", "cache=none"]
+  mount_options       = var.mount_options
+  parameters = {
+    provisioningMode = "efs-ap"
+    fileSystemId     = "${aws_efs_file_system.this.id}"
+    directoryPerms   = var.efs_permissions
+  }
 }
 
 resource "aws_iam_role_policy" "this" {
@@ -181,4 +138,118 @@ resource "aws_iam_role" "this" {
       },
     ]
   })
+}
+
+
+resource "helm_release" "aws_efs_csi_driver" {
+  count      = 1 - local.argocd_enabled
+  name       = local.name
+  repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver"
+  chart      = local.chart
+  namespace  = "kube-system"
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.this.arn
+  }
+}
+
+locals {
+  argocd_enabled = length(var.argocd) > 0 ? 1 : 0
+  namespace      = var.namespace
+
+  name       = var.chart_name
+  repository = "https://kubernetes.github.io/ingress-nginx"
+  chart      = var.chart_name
+  version    = var.chart_version
+
+  efs_app = {
+    "apiVersion" = "argoproj.io/v1alpha1"
+    "kind"       = "Application"
+    "metadata" = {
+      "name"      = local.name
+      "namespace" = local.argocd_enabled == 1 ? var.argocd.namespace : "default"
+    }
+    "spec" = {
+      "destination" = {
+        "namespace" = local.namespace
+        "server"    = "https://kubernetes.default.svc"
+      }
+      "project" = "default"
+      "source" = {
+        "repoURL"        = local.repository
+        "targetRevision" = local.version
+        "chart"          = local.chart
+        "helm" = {
+          "parameters" = values({
+            for key, value in local.conf :
+            key => {
+              "name"  = key
+              "value" = tostring(value)
+            }
+          })
+        }
+      }
+      "syncPolicy" = {
+        "automated" = {
+          "prune"    = true
+          "selfHeal" = true
+        }
+      }
+    }
+  }
+  conf = merge(local.conf_defaults, var.conf)
+  conf_defaults = merge(
+    {
+      "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn" : aws_iam_role.this.arn
+  })
+
+  sc_manifest = <<YAML
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: efs-sc
+parameters:
+  directoryPerms: ${var.efs_permissions}
+  fileSystemId: ${aws_efs_file_system.this.id}
+  provisioningMode: efs-ap
+provisioner: efs.csi.aws.com
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+YAML
+
+  pvc_manifest = <<YAML
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${var.pvc_name}
+  namespace: ${var.namespace}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ${kubernetes_storage_class.this.metadata.0.name}
+  resources:
+    requests:
+      storage: ${var.pvc_size}
+YAML
+}
+
+
+resource "local_file" "storageclass" {
+  count    = local.argocd_enabled
+  content  = yamlencode(local.sc_manifest)
+  filename = "${var.argocd.path}/storageclass.yaml"
+}
+
+resource "local_file" "pvc" {
+  count    = local.argocd_enabled
+  content  = yamlencode(local.pvc_manifest)
+  filename = "${var.argocd.path}/pvc.yaml"
+}
+
+resource "local_file" "this" {
+  count    = local.argocd_enabled
+  content  = yamlencode(local.efs_app)
+  filename = "${var.argocd.path}/${local.name}.yaml"
 }
