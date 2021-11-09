@@ -31,6 +31,7 @@ resource "kubernetes_namespace" "this" {
   }
 }
 
+
 resource "aws_kms_key" "this" {
   count                   = var.s3_create_bucket ? 1 : 0
   description             = "Key for vault s3 bucket"
@@ -60,14 +61,14 @@ resource "aws_iam_user_policy" "this" {
   user  = aws_iam_user.this.0.id
 
   policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
+    "Version" = "2012-10-17"
+    "Statement" = [
       {
-        Action = [
+        "Effect" = "Allow",
+        "Action" = [
           "s3:*"
-        ]
-        Effect   = "Allow"
-        Resource = aws_s3_bucket.this.0.arn
+        ],
+        "Resource" = "${aws_s3_bucket.this.0.arn}/*"
       },
     ]
   })
