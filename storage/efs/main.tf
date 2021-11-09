@@ -40,6 +40,17 @@ provider "kubernetes" {
   token                  = data.aws_eks_cluster_auth.cluster.token
 }
 
+resource "kubernetes_namespace" "this" {
+  count = var.chart_create_namespace ? 1 : 0
+  metadata {
+    annotations = {
+      name = var.chart_namespace
+    }
+
+    name = var.chart_namespace
+  }
+}
+
 resource "aws_kms_key" "this" {
   description = "EFS folder Encryption Key"
 }
@@ -66,6 +77,7 @@ resource "aws_efs_access_point" "this" {
 }
 
 resource "aws_efs_mount_target" "this" {
+  depends_on      = [kubernetes_persistent_volume_claim.this]
   for_each        = { for subnet in data.aws_subnets.this.ids : subnet => subnet }
   file_system_id  = aws_efs_file_system.this.id
   subnet_id       = each.key
@@ -122,10 +134,10 @@ resource "kubernetes_persistent_volume" "this" {
 }
 
 resource "kubernetes_persistent_volume_claim" "this" {
-  depends_on = [kubernetes_persistent_volume.this]
+  depends_on = [kubernetes_persistent_volume.this, kubernetes_namespace.this.0]
   metadata {
     name      = var.pvc_name
-    namespace = var.namespace
+    namespace = var.chart_namespace
   }
   spec {
     access_modes = ["ReadWriteMany"]

@@ -10,6 +10,8 @@ module "efs" {
   cluster_name = "swiss-army-kube"
   aws_region   = "eu-north-1"
   efs_name     = "sak-efs-folder"
+  chart_namespace = "default"
+  chart_create_namespace = false
 }
 ```
 
@@ -33,12 +35,12 @@ terraform >= 0.15
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:-----:|
 | region | A AWS region name | `string` | n/a | yes |
-| namespace | Kubernetes namespace name for PV/PVC | `string` | `"default"` | no |
+| chart\_namespace | Kubernetes namespace name for PV/PVC | `string` | `"default"` | no |
 | cluster\_name | A name of the EKS cluster | `string` | n/a | yes |
 | efs\_name | A name of the EFS storage | `string` | n/a | yes |
 | efs\_owner\_uid | A User ID for EFS configuration | `string` | `"1000"` | no |
 | efs\_owner\_gid | A Group ID for EFS configuration | `string` | `"1000"` | no |
-| efs\_folder\_path | A folder path inside EFS | `string` | `"/"` | no |
+| efs\_folder\_path | A folder path inside EFS | `string` | `"/shared_folder"` | no |
 | efs\_folder\_permissions | A folder permissions in EFS | `string` | `"775"` | no |
 | pv\_name | A name of the Persistent Volume | `string` | `"efs-pv"` | no |
 | pv\_size | A size of the Persistent Volume | `string` | `"5Gi"` | no |

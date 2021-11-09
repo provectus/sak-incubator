@@ -8,10 +8,16 @@ variable "cluster_name" {
   description = "A name of the EKS cluster"
 }
 
-variable "namespace" {
+variable "chart_namespace" {
   type        = string
   default     = "default"
   description = "Kubernetes namespace name for PV/PVC"
+}
+
+variable "chart_create_namespace" {
+  type        = bool
+  default     = false
+  description = "A option for creating Kubernetes namespace"
 }
 
 variable "efs_name" {
@@ -33,7 +39,7 @@ variable "efs_owner_gid" {
 
 variable "efs_folder_path" {
   type        = string
-  default     = "/"
+  default     = "/shared_folder"
   description = "A folder path inside EFS"
 }
 
