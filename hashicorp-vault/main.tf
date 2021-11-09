@@ -67,7 +67,7 @@ resource "aws_iam_user_policy" "this" {
           "s3:*"
         ]
         Effect   = "Allow"
-        Resource = "*"
+        Resource = aws_s3_bucket.this.0.arn
       },
     ]
   })
@@ -75,7 +75,7 @@ resource "aws_iam_user_policy" "this" {
 
 resource "aws_iam_policy_attachment" "this" {
   count      = var.s3_storage ? 1 : 0
-  name       = "test-attachment"
+  name       = "vault-${var.cluster_name}"
   users      = [aws_iam_user.this.0.name]
   roles      = []
   groups     = []
@@ -214,7 +214,6 @@ EOT
   })
 
   vault_conf = <<EOT
-ui = true
 listener "tcp" {
   tls_disable = 1
   address = "[::]:8200"

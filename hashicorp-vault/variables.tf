@@ -17,7 +17,7 @@ variable "chart_name" {
 
 variable "chart_namespace" {
   type        = string
-  default     = "default"
+  default     = "kube-system"
   description = "A namespace for vault installation"
 }
 
