@@ -49,4 +49,6 @@ terraform >= 0.15
 
 ## Outputs
 
-No outputs.
+| Name | Description |
+|------|-------------|
+| pvc_name | A name of PVC |
