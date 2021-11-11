@@ -33,23 +33,20 @@ terraform >= 0.15
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:-----:|
-| region | A AWS region name | `string` | n/a | yes |
-| namespace | Kubernetes namespace name for PV/PVC | `string` | `"default"` | no |
+| aws_region | A AWS region name | `string` | n/a | yes |
+| chart\_name | A name of csi-driver chart | `string` | `"aws-efs-csi-driver"` | no |
+| chart\_version | A version of csi-driver chart | `string` | `"2.2.0"` | no |
+| namespace | Kubernetes namespace name for PV/PVC | `string` | `"kube-system"` | no |
+| conf | A set of parameters to pass to csi-driver chart | `map` | `{}` | no |
 | cluster\_name | A name of the EKS cluster | `string` | n/a | yes |
+| argocd | A set of values for enabling deployment through ArgoCD | `map(string)` | `{}` | no |
 | efs\_name | A name of the EFS storage | `string` | n/a | yes |
-| efs\_owner\_uid | A User ID for EFS configuration | `string` | `"1000"` | no |
-| efs\_owner\_gid | A Group ID for EFS configuration | `string` | `"1000"` | no |
-| efs\_folder\_path | A folder path inside EFS | `string` | `"/"` | no |
-| efs\_folder\_permissions | A folder permissions in EFS | `string` | `"775"` | no |
-| pv\_name | A name of the Persistent Volume | `string` | `"efs-pv"` | no |
-| pv\_size | A size of the Persistent Volume | `string` | `"5Gi"` | no |
+| efs\_permissions | EFS directory permissions | `string` | `"700"` | no |
+| mount\_options | A list of mount options | `list` | `[]` | yes |
 | pvc\_name | A name of the Persistent Volume Claim | `string` | `"efs-pvc"` | no |
 | pvc\_size | A size of the Persistent Volume Claim | `string` | `"5Gi"` | no |
 | tags | Tags to add to AWS resources | `map(string)` | `{}` | no |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| aws_efs_file_system_id | A id of EFS object in AWS |
-| aws_efs_access_point_id | A id of EFS access point in AWS |
+No outputs.

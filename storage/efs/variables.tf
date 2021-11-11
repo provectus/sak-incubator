@@ -22,7 +22,7 @@ variable "cluster_name" {
 
 variable "namespace" {
   type        = string
-  default     = "default"
+  default     = "kube-system"
   description = "Kubernetes namespace name for PV/PVC"
 }
 
@@ -52,7 +52,7 @@ variable "efs_permissions" {
 variable "mount_options" {
   type        = list(string)
   default     = []
-  description = "EFS directory permissions"
+  description = "A list of mount options"
 }
 
 variable "pvc_name" {

@@ -76,13 +76,14 @@ resource "aws_security_group" "this" {
 }
 
 resource "kubernetes_persistent_volume_claim" "this" {
+  count = 1 - local.argocd_enabled
   metadata {
     name      = var.pvc_name
     namespace = var.namespace
   }
   spec {
     access_modes       = ["ReadWriteMany"]
-    storage_class_name = kubernetes_storage_class.this.metadata.0.name
+    storage_class_name = kubernetes_storage_class.this.0.metadata.0.name
     resources {
       requests = {
         storage = var.pvc_size
@@ -92,6 +93,7 @@ resource "kubernetes_persistent_volume_claim" "this" {
 }
 
 resource "kubernetes_storage_class" "this" {
+  count = 1 - local.argocd_enabled
   metadata {
     name = "efs-sc"
   }
@@ -143,8 +145,8 @@ resource "aws_iam_role" "this" {
 
 resource "helm_release" "aws_efs_csi_driver" {
   count      = 1 - local.argocd_enabled
-  name       = local.name
-  repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver"
+  name       = local.chart
+  repository = local.repository
   chart      = local.chart
   namespace  = "kube-system"
 
@@ -157,18 +159,16 @@ resource "helm_release" "aws_efs_csi_driver" {
 locals {
   argocd_enabled = length(var.argocd) > 0 ? 1 : 0
   namespace      = var.namespace
+  chart          = var.chart_name
+  repository     = "https://kubernetes-sigs.github.io/aws-efs-csi-driver"
+  version        = var.chart_version
 
-  name       = var.chart_name
-  repository = "https://kubernetes.github.io/ingress-nginx"
-  chart      = var.chart_name
-  version    = var.chart_version
-
-  efs_app = {
+  csi_driver_app = {
     "apiVersion" = "argoproj.io/v1alpha1"
     "kind"       = "Application"
     "metadata" = {
-      "name"      = local.name
-      "namespace" = local.argocd_enabled == 1 ? var.argocd.namespace : "default"
+      "name"      = local.chart
+      "namespace" = local.argocd_enabled == 1 ? var.argocd.namespace : "argocd"
     }
     "spec" = {
       "destination" = {
@@ -181,13 +181,10 @@ locals {
         "targetRevision" = local.version
         "chart"          = local.chart
         "helm" = {
-          "parameters" = values({
-            for key, value in local.conf :
-            key => {
-              "name"  = key
-              "value" = tostring(value)
-            }
-          })
+          "parameters" = [
+            { name = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+            value = aws_iam_role.this.arn }
+          ]
         }
       }
       "syncPolicy" = {
@@ -198,58 +195,95 @@ locals {
       }
     }
   }
+
+  efs_app = {
+    "apiVersion" = "argoproj.io/v1alpha1"
+    "kind"       = "Application"
+    "metadata" = {
+      "name"      = "efs-app"
+      "namespace" = local.argocd_enabled == 1 ? var.argocd.namespace : "argocd"
+    }
+    "spec" = {
+      "destination" = {
+        "namespace" = local.namespace
+        "server"    = "https://kubernetes.default.svc"
+      }
+      "project" = "default"
+      "source" = {
+        "path" = local.argocd_enabled == 1 ? "${var.argocd.full_path}/efs" : ""
+        "plugin" = {
+          "name" = "decryptor"
+        }
+        "repoURL"        = local.argocd_enabled == 1 ? var.argocd.repository : ""
+        "targetRevision" = local.argocd_enabled == 1 ? var.argocd.branch : ""
+      }
+      "syncPolicy" = {
+        "automated" = {
+          "prune"    = true
+          "selfHeal" = true
+        }
+      }
+    }
+
+  }
   conf = merge(local.conf_defaults, var.conf)
   conf_defaults = merge(
     {
       "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn" : aws_iam_role.this.arn
   })
 
-  sc_manifest = <<YAML
-allowVolumeExpansion: true
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: efs-sc
-parameters:
-  directoryPerms: ${var.efs_permissions}
-  fileSystemId: ${aws_efs_file_system.this.id}
-  provisioningMode: efs-ap
-provisioner: efs.csi.aws.com
-reclaimPolicy: Retain
-volumeBindingMode: Immediate
-YAML
+  sc_manifest = <<EOF
+"allowVolumeExpansion": true
+"apiVersion": "storage.k8s.io/v1"
+"kind": "StorageClass"
+"metadata":
+  "name": "efs-sc"
+"parameters":
+  "directoryPerms": "${var.efs_permissions}"
+  "fileSystemId": "${aws_efs_file_system.this.id}"
+  "provisioningMode": "efs-ap"
+"provisioner": "efs.csi.aws.com"
+"reclaimPolicy": "Retain"
+"volumeBindingMode": "Immediate"
+EOF
 
-  pvc_manifest = <<YAML
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${var.pvc_name}
-  namespace: ${var.namespace}
-spec:
-  accessModes:
+  pvc_manifest = <<EOF
+"apiVersion": "v1"
+"kind": "PersistentVolumeClaim"
+"metadata":
+  "name": "${var.pvc_name}"
+  "namespace": "${var.namespace}"
+"spec":
+  "accessModes":
     - ReadWriteMany
-  storageClassName: ${kubernetes_storage_class.this.metadata.0.name}
-  resources:
-    requests:
-      storage: ${var.pvc_size}
-YAML
+  "storageClassName": "efs-sc"
+  "resources":
+    "requests":
+      "storage": "${var.pvc_size}"
+EOF
 }
 
 
 resource "local_file" "storageclass" {
   count    = local.argocd_enabled
-  content  = yamlencode(local.sc_manifest)
-  filename = "${var.argocd.path}/storageclass.yaml"
+  content  = local.sc_manifest
+  filename = "${var.argocd.path}/efs/storageclass.yaml"
 }
 
 resource "local_file" "pvc" {
   count    = local.argocd_enabled
-  content  = yamlencode(local.pvc_manifest)
-  filename = "${var.argocd.path}/pvc.yaml"
+  content  = local.pvc_manifest
+  filename = "${var.argocd.path}/efs/pvc.yaml"
 }
 
-resource "local_file" "this" {
+resource "local_file" "efs_app" {
   count    = local.argocd_enabled
   content  = yamlencode(local.efs_app)
-  filename = "${var.argocd.path}/${local.name}.yaml"
+  filename = "${var.argocd.path}/efs-app.yaml"
+}
+
+resource "local_file" "csi_driver_app" {
+  count    = local.argocd_enabled
+  content  = yamlencode(local.csi_driver_app)
+  filename = "${var.argocd.path}/efs-csi-driver.yaml"
 }
