@@ -11,6 +11,8 @@ module "efs" {
   argocd       = {}
   aws_region   = "eu-north-1"
   efs_name     = "sak-efs-folder"
+  chart_namespace = "default"
+  chart_create_namespace = false
 }
 ```
 
