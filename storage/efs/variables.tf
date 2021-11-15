@@ -3,21 +3,39 @@ variable "aws_region" {
   description = "AWS region name"
 }
 
+variable "chart_name" {
+  type        = string
+  description = "Name of CSI driver chart"
+  default     = "aws-efs-csi-driver"
+}
+
+variable "chart_version" {
+  type        = string
+  description = "Chart version"
+  default     = "2.2.0"
+}
+
 variable "cluster_name" {
   type        = string
   description = "A name of the EKS cluster"
 }
 
-variable "chart_namespace" {
+variable "namespace" {
   type        = string
-  default     = "default"
+  default     = "kube-system"
   description = "Kubernetes namespace name for PV/PVC"
 }
 
-variable "chart_create_namespace" {
-  type        = bool
-  default     = false
-  description = "A option for creating Kubernetes namespace"
+variable "conf" {
+  type        = map(string)
+  description = "A custom configuration for deployment"
+  default     = {}
+}
+
+variable "argocd" {
+  type        = map(string)
+  description = "A set of values for enabling deployment through ArgoCD"
+  default     = {}
 }
 
 variable "efs_name" {
@@ -25,40 +43,16 @@ variable "efs_name" {
   description = "A name of the EFS storage"
 }
 
-variable "efs_owner_uid" {
+variable "efs_permissions" {
   type        = string
-  default     = "1000"
-  description = "A User ID for EFS configuration"
+  default     = "700"
+  description = "EFS directory permissions"
 }
 
-variable "efs_owner_gid" {
-  type        = string
-  default     = "1000"
-  description = "A Group ID for EFS configuration"
-}
-
-variable "efs_folder_path" {
-  type        = string
-  default     = "/shared_folder"
-  description = "A folder path inside EFS"
-}
-
-variable "efs_folder_permissions" {
-  type        = string
-  default     = "775"
-  description = "A folder permissions in EFS"
-}
-
-variable "pv_name" {
-  type        = string
-  default     = "efs-pv"
-  description = "A name of the Persistent Volume"
-}
-
-variable "pv_size" {
-  type        = string
-  default     = "5Gi"
-  description = "A size of the Persistent Volume"
+variable "mount_options" {
+  type        = list(string)
+  default     = []
+  description = "A list of mount options"
 }
 
 variable "pvc_name" {
