@@ -1,6 +1,7 @@
 variable "values" {
-  default     = {}
-  description = "A values for Helm Chart"
+  type        = string
+  default     = ""
+  description = "A values for Helm Chart in YAML format"
 }
 
 variable "namespace" {

@@ -17,7 +17,7 @@ resource "helm_release" "app" {
   version    = var.chart_version
   namespace  = local.namespace
   timeout    = 1200
-  values     = [yamlencode(var.values)]
+  values     = [var.values]
   set {
     name  = var.irsa_annotation_field
     value = module.iam_assumable_role.iam_role_arn
@@ -81,7 +81,7 @@ locals {
               "value" = module.iam_assumable_role.iam_role_arn
             }
           ]
-          "values" = yamlencode(var.values)
+          "values" = var.values
         }
       }
       "syncPolicy" = {
