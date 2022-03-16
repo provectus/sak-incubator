@@ -69,13 +69,13 @@ locals {
         "namespace" = local.namespace
         "server"    = var.destination_server
       }
-      "project" = var.argocd.project
+      "project" = var.project == "" ? var.argocd.project : var.project
       "source" = {
         "repoURL"        = var.repository
         "targetRevision" = var.chart_version
         "chart"          = var.chart
         "helm" = {
-          "parameters" = [
+          "parameters" = module.iam_assumable_role.iam_role_arn == "" ? [] : [
             {
               "name"  = var.irsa_annotation_field
               "value" = module.iam_assumable_role.iam_role_arn

@@ -77,3 +77,9 @@ variable "destination_server" {
   default     = "https://kubernetes.default.svc"
   description = "A destination server for ArgoCD application"
 }
+
+variable "project" {
+  type        = string
+  default     = ""
+  description = "A custom ArgoCD project for application, if not specified a project of ArgoCD itself be used"
+}
