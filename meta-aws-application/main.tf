@@ -1,5 +1,6 @@
 data "aws_eks_cluster" "this" {
-  name = var.cluster_name
+  count = local.use_aws ? 1 : 0
+  name  = var.cluster_name
 }
 
 resource "kubernetes_namespace" "this" {
@@ -20,16 +21,17 @@ resource "helm_release" "app" {
   values     = [var.values]
   set {
     name  = var.irsa_annotation_field
-    value = module.iam_assumable_role.iam_role_arn
+    value = local.aws_role_arn
   }
 }
 
 module "iam_assumable_role" {
+  count        = local.use_aws ? 1 : 0
   source       = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version      = "~> v4.3.0"
   role_name    = "${var.cluster_name}_${local.name}"
   create_role  = var.iam_permissions == [] ? false : true
-  provider_url = replace(data.aws_eks_cluster.this.identity.0.oidc.0.issuer, "https://", "")
+  provider_url = replace(data.aws_eks_cluster.this[0].identity.0.oidc.0.issuer, "https://", "")
   role_policy_arns = [for p in aws_iam_policy.app :
     p.arn
   ]
@@ -38,7 +40,7 @@ module "iam_assumable_role" {
 }
 
 resource "aws_iam_policy" "app" {
-  count = var.iam_permissions == [] ? 0 : 1
+  count = local.use_aws ? 1 : 0
   name  = "${var.cluster_name}_${local.name}"
   policy = jsonencode({
     Version   = "2012-10-17"
@@ -49,13 +51,23 @@ resource "aws_iam_policy" "app" {
 
 resource "local_file" "app" {
   count    = local.argocd_enabled
-  content  = yamlencode(local.app)
+  content  = data.utils_deep_merge_yaml.merged.output
   filename = "${var.argocd.path}/${local.name}.yaml"
+}
+
+data "utils_deep_merge_yaml" "merged" {
+  input = [
+    yamlencode(local.app),
+    yamlencode(var.argocd_custom_app_settings)
+  ]
+  deep_copy_list = true
 }
 
 locals {
   name           = var.name == "" ? var.chart : var.name
   argocd_enabled = length(var.argocd) > 0 ? 1 : 0
+  use_aws        = var.iam_permissions == [] ? false : true
+  aws_role_arn   = coalescelist(module.iam_assumable_role, [{ iam_role_arn = "" }])[0].iam_role_arn
   namespace      = coalescelist(kubernetes_namespace.this, [{ "metadata" = [{ "name" = var.namespace }] }])[0].metadata[0].name
   app = {
     "apiVersion" = "argoproj.io/v1alpha1"
@@ -74,15 +86,19 @@ locals {
         "repoURL"        = var.repository
         "targetRevision" = var.chart_version
         "chart"          = var.chart
-        "helm" = {
-          "parameters" = module.iam_assumable_role.iam_role_arn == "" ? [] : [
-            {
-              "name"  = var.irsa_annotation_field
-              "value" = module.iam_assumable_role.iam_role_arn
-            }
-          ]
-          "values" = var.values
-        }
+        "helm" = merge(
+          local.aws_role_arn == "" ? {} : {
+            "parameters" = [
+              {
+                "name"  = var.irsa_annotation_field
+                "value" = local.aws_role_arn
+              }
+            ]
+          },
+          {
+            "values" = var.values
+          }
+        )
       }
       "syncPolicy" = {
         "syncOptions" = [
