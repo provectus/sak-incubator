@@ -83,3 +83,9 @@ variable "project" {
   default     = ""
   description = "A custom ArgoCD project for application, if not specified a project of ArgoCD itself be used"
 }
+
+variable "argocd_custom_app_settings" {
+  type        = any
+  default     = {}
+  description = "A custom ArgoCD application settings, for example: use folder with Helm chart instead of chart repository"
+}
