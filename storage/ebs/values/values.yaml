@@ -1,0 +1,49 @@
+# Default values for aws-ebs-csi-controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+## Resources created by the EBS CSI controller will be prefixed with this string
+## Required
+clusterName: ${cluster_name}
+
+## AWS region of k8s cluster, required if ec2metadata is unavailable from controller pod
+## Required if autoDiscoverAwsRegion != true
+awsRegion: ${region}
+
+## VPC ID of k8s cluster, required if ec2metadata is unavailable from controller pod
+## Required if autoDiscoverAwsVpcID != true
+awsVpcID: ${vpc_id}
+
+serviceAccount:
+  annotations:
+    "eks.amazonaws.com/role-arn": ${role-arn}
+
+#####################
+# aws-ebs-csi-driver:
+#   storageClasses: 
+#   - name: ebs-sc
+#     annotations:
+#       storageclass.kubernetes.io/is-default-class: "true"
+#     volumeBindingMode: WaitForFirstConsumer
+#     reclaimPolicy: Retain
+#     parameters:
+#       encrypted: "true"
+#     allowVolumeExpansion: true
+
+#   controller:
+#     region: your-region
+#     replicaCount: 1
+#     serviceAccount:
+#       create: false
+#       name: ebs-csi-controller
+#     logLevel: 3
+#     extraVolumeTags:
+#       PartOf: k8s
+#       cluster_name: yourclustername
+#     resources: 
+#       limits:
+#         cpu: 100m
+#         memory: 128Mi
+#       requests:
+#         cpu: 50m
+#         memory: 64Mi
