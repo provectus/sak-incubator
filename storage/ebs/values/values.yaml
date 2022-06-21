@@ -18,17 +18,17 @@ serviceAccount:
   annotations:
     "eks.amazonaws.com/role-arn": ${role-arn}
 
-#####################
-# aws-ebs-csi-driver:
-#   storageClasses: 
-#   - name: ebs-sc
-#     annotations:
-#       storageclass.kubernetes.io/is-default-class: "true"
-#     volumeBindingMode: WaitForFirstConsumer
-#     reclaimPolicy: Retain
-#     parameters:
-#       encrypted: "true"
-#     allowVolumeExpansion: true
+####################
+aws-ebs-csi-driver:
+  storageClasses: 
+  - name: ebs-sc
+    annotations:
+      storageclass.kubernetes.io/is-default-class: "true"
+    volumeBindingMode: WaitForFirstConsumer
+    reclaimPolicy: Retain
+    parameters:
+      encrypted: "true"
+    allowVolumeExpansion: true
 
 #   controller:
 #     region: your-region

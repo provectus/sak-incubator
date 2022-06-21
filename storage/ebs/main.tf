@@ -1,5 +1,6 @@
 data "aws_region" "current" {}
 
+# k8s namespace
 data "kubernetes_namespace" "ebs_csi_driver" {
   metadata {
     name = "kube-system"

@@ -1,12 +1,12 @@
-# variable "cluster_name" {
-#   type        = string
-#   description = "Name of the kubernetes cluster"
-# }
+variable "cluster_name" {
+  type        = string
+  description = "Name of the kubernetes cluster"
+}
 
-# variable "vpc_id" {
-#   type        = string
-#   description = "domain name for ingress"
-# }
+variable "vpc_id" {
+  type        = string
+  description = "domain name for ingress"
+}
 
 # variable "certificates_arns" {
 #   type        = list(string)
