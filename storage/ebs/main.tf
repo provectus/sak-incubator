@@ -1,19 +1,62 @@
+data "aws_eks_cluster" "this" {
+  name = var.cluster_name
+}
+
 data "aws_region" "current" {}
 
-# k8s namespace
-data "kubernetes_namespace" "ebs_csi_driver" {
-  metadata {
-    name = "kube-system"
+# resource "kubernetes_namespace" "this" {
+#   count = var.namespace == "kube-system" ? 0 : 1
+#   metadata {
+#     name = var.namespace_name
+#   }
+# }
+
+locals {
+  argocd_enabled = length(var.argocd) > 0 ? 1 : 0
+  namespace      = coalescelist(var.namespace, [{ "metadata" = [{ "name" = var.namespace }] }])[0].metadata[0].name
+}
+
+resource "helm_release" "this" {
+  count = 1 - local.argocd_enabled
+  depends_on = [
+    var.module_depends_on
+  ]
+  name          = local.name
+  repository    = local.repository
+  chart         = local.chart
+  version       = local.chart_version
+  namespace     = local.namespace
+  recreate_pods = true
+  timeout       = 1200
+
+  dynamic "set" {
+    for_each = local.conf
+
+    content {
+      name  = set.key
+      value = set.value
+    }
   }
 }
 
-data "aws_caller_identity" "current" {}
+module "iam_assumable_role_admin" {
+  source                        = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version                       = "~> v3.6.0"
+  create_role                   = true
+  role_name                     = "${data.aws_eks_cluster.this.id}_${local.name}"
+  provider_url                  = replace(data.aws_eks_cluster.this.identity.0.oidc.0.issuer, "https://", "")
+  role_policy_arns              = [aws_iam_policy.this.arn]
+  oidc_fully_qualified_subjects = ["system:serviceaccount:${local.namespace}:${local.name}"]
 
+  tags = var.tags
+}
 
-# Create role for ebs-csi-driver
-resource "aws_iam_policy" "ebs_csi_driver" {
-  name = "${var.cluster_name}-ebs-csi-driver"
-
+resource "aws_iam_policy" "this" {
+  depends_on = [
+    var.module_depends_on
+  ]
+  name_prefix = "${data.aws_eks_cluster.this.id}-external-dns-"
+  description = "EKS external-dns policy for cluster ${data.aws_eks_cluster.this.id}"
   policy                  = <<EOF
 {
   "Version": "2012-10-17",
@@ -137,61 +180,71 @@ resource "aws_iam_policy" "ebs_csi_driver" {
   ]
 }
 EOF
+
 }
 
-# Create role for ebs-driver
-resource "aws_iam_role" "ebs_csi_driver" {
-  name               = "${var.cluster_name}_ebs-csi-driver"
-  description        = "Role for ebs-csi-driver"
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
+resource "local_file" "this" {
+  count = local.argocd_enabled
+  depends_on = [
+    var.module_depends_on
+  ]
+  content  = yamlencode(local.application)
+  filename = "${path.root}/${var.argocd.path}/${local.name}.yaml"
+}
+
+locals {
+  repository    = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
+  name          = "aws-ebs-csi-driver"
+  chart         = "aws-ebs-csi-driver"
+  chart_version = var.chart_version
+  conf          = merge(local.conf_defaults, var.conf)
+  conf_defaults = merge({
+    "rbac.create"                                               = true,
+    "resources.limits.cpu"                                      = "100m",
+    "resources.limits.memory"                                   = "300Mi",
+    "resources.requests.cpu"                                    = "100m",
+    "resources.requests.memory"                                 = "300Mi",
+    "aws.region"                                                = data.aws_region.current.name
+    "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn" = module.iam_assumable_role_admin.this_iam_role_arn
+    },
     {
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "${replace(var.cluster_oidc_url, "https://", "")}:sub": "system:serviceaccount:${data.kubernetes_namespace.ebs_csi_driver.metadata[0].name}:aws-ebs-csi-driver"
-        }
-      },
-      "Principal": {
-        "Federated": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(var.cluster_oidc_url, "https://", "")}"
-      },
-      "Effect": "Allow",
-      "Sid": ""
+      for i, zone in concat(var.hostedzones, data.aws_route53_zone.main.*.name) :
+      "domainFilters[${i}]" => zone
     }
-  ]
-}
-EOF
-}
-
-# Attach policy ebs-driver to role ebs-driver
-resource "aws_iam_role_policy_attachment" "ebs_csi_driver" {
-  depends_on = [
-    aws_iam_policy.ebs_csi_driver
-  ]
-  role       = aws_iam_role.ebs_csi_driver.name
-  policy_arn = aws_iam_policy.ebs_csi_driver.arn
-}
-
-resource "helm_release" "ebs_driver" {
-  depends_on = [
-    aws_iam_role.ebs_csi_driver
-  ]
-  name       = "ebs-csi-driver"
-  repository = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
-  chart      = "aws-ebs-csi-driver"
-  version    = "2.6.2"
-  namespace  = data.kubernetes_namespace.ebs_csi_driver.metadata[0].name
-  #namespace = "kube-system"
-
-
-  values = [templatefile("${path.module}/values/values.yaml",
-    {
-      cluster_name = var.cluster_name
-      vpc_id       = var.vpc_id
-      region       = data.aws_region.current.name
-      role-arn     = aws_iam_role.ebs_csi_driver.arn
-    })
-  ]
+  )
+  application = {
+    "apiVersion" = "argoproj.io/v1alpha1"
+    "kind"       = "Application"
+    "metadata" = {
+      "name"      = local.name
+      "namespace" = var.argocd.namespace
+    }
+    "spec" = {
+      "destination" = {
+        "namespace" = local.namespace
+        "server"    = "https://kubernetes.default.svc"
+      }
+      "project" = "default"
+      "source" = {
+        "repoURL"        = local.repository
+        "targetRevision" = local.chart_version
+        "chart"          = local.chart
+        "helm" = {
+          "parameters" = values({
+            for key, value in local.conf :
+            key => {
+              "name"  = key
+              "value" = tostring(value)
+            }
+          })
+        }
+      }
+      "syncPolicy" = {
+        "automated" = {
+          "prune"    = true
+          "selfHeal" = true
+        }
+      }
+    }
+  }
 }
