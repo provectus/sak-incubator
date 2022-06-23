@@ -11,7 +11,9 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 * **Volume Snapshots** - Create and restore [snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) taken from a volume in Kubernetes.
 * **Volume Resizing** - Expand the volume size by specifying a new size in the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#PersistentVolumeClaim:~:text=PersistentVolumeClaim%20(PVC)) (PVC).
 
-# Examples
+# Example dynamic provisioning
+
+### Use "kubectl create -f file_below.yaml". A persistent volume will be automatically created based on your volume claim.
 
 ```
 apiVersion: v1
