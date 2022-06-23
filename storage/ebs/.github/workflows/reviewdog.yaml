@@ -1,0 +1,45 @@
+name: reviewdog
+on:
+  pull_request:
+    paths:
+    - '**.tf'
+    - '**.tfvars'
+    - '**.tfvars.json'
+env:
+  TERRAFORM_VERSION: "1.0.6"
+
+jobs:
+
+  tflint:
+    name: runner / tflint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@master
+
+      # Install latest Terraform manually as
+      #  Docker-based GitHub Actions are
+      #  slow due to lack of caching
+      # Note: Terraform is not needed for tflint
+      - name: Install Terraform
+        run: |
+          brew install tfenv
+          tfenv install ${TERRAFORM_VERSION}
+
+      # Run init to get module code to be able to use `--module`
+      - name: Terraform init common
+        run: |
+          tfenv use ${TERRAFORM_VERSION}
+          terraform init --upgrade
+
+      # More complex example
+      - name: tflint common
+        uses: reviewdog/action-tflint@master
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review # Optional. Change reporter
+          fail_on_error: "true" # Optional. Fail action if errors are found
+          filter_mode: "nofilter" # Optional. Check all files, not just the diff
+          level: info
+          flags: "--module" # Optional. Add custom tflint flags
