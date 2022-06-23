@@ -4,18 +4,6 @@ data "aws_eks_cluster" "this" {
 
 data "aws_region" "current" {}
 
-# resource "kubernetes_namespace" "this" {
-#   count = var.namespace == "kube-system" ? 0 : 1
-#   metadata {
-#     name = var.namespace_name
-#   }
-# }
-
-locals {
-  argocd_enabled = length(var.argocd) > 0 ? 1 : 0
-  namespace      = coalescelist(var.namespace, [{ "metadata" = [{ "name" = var.namespace }] }])[0].metadata[0].name
-}
-
 resource "helm_release" "this" {
   count = 1 - local.argocd_enabled
   depends_on = [
@@ -39,6 +27,81 @@ resource "helm_release" "this" {
   }
 }
 
+locals {
+  repository    = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
+  name          = "aws-ebs-csi-driver"
+  chart         = "aws-ebs-csi-driver"
+  chart_version = var.chart_version
+  conf          = merge(local.conf_defaults, var.conf)
+  conf_defaults = {
+    "storageClasses[0].name"                                                        = "ebs-sc",
+    "storageClasses[0].annotations.storageclass\\.kubernetes\\.io/is-default-class" = "\"true\"",
+    "storageClasses[0].volumeBindingMode"                                           = "WaitForFirstConsumer"
+    "storageClasses[0].reclaimPolicy"                                               = "Retain"
+    "storageClasses[0].allowVolumeExpansion"                                        = true,
+    "storageClasses[0].parameters.encrypted"                                        = "\"true\"",
+    "resources.limits.cpu"                                                          = "100m",
+    "resources.limits.memory"                                                       = "128Mi",
+    "resources.requests.cpu"                                                        = "50m",
+    "resources.requests.memory"                                                     = "64Mi",
+    "controller.region"                                                             = data.aws_region.current.name
+    "controller.serviceAccount.create"                                              = false,
+    "controller.serviceAccount.name"                                                = local.name,
+    "controller.logLevel"                                                           = "3",
+    "controller.extraVolumeTags.PartOf" : "k8s",
+    "controller.extraVolumeTags.cluster_name" : data.aws_eks_cluster.this.name,
+
+
+  }
+  application = {
+    "apiVersion" = "argoproj.io/v1alpha1"
+    "kind"       = "Application"
+    "metadata" = {
+      "name"      = local.name
+      "namespace" = var.argocd.namespace
+    }
+    "spec" = {
+      "destination" = {
+        "namespace" = local.namespace
+        "server"    = "https://kubernetes.default.svc"
+      }
+      "project" = "default"
+      "source" = {
+        "repoURL"        = local.repository
+        "targetRevision" = local.chart_version
+        "chart"          = local.chart
+        "helm" = {
+          "parameters" = values({
+            for key, value in local.conf :
+            key => {
+              "name"  = key
+              "value" = tostring(value)
+            }
+          })
+        }
+      }
+      "syncPolicy" = {
+        "automated" = {
+          "prune"    = true
+          "selfHeal" = true
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_namespace" "this" {
+  count = var.namespace == "kube-system" ? 0 : 1
+  metadata {
+    name = var.namespace_name
+  }
+}
+
+locals {
+  argocd_enabled = length(var.argocd) > 0 ? 1 : 0
+  namespace      = coalescelist(kubernetes_namespace.this, [{ "metadata" = [{ "name" = var.namespace }] }])[0].metadata[0].name
+}
+
 module "iam_assumable_role_admin" {
   source                        = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version                       = "~> v3.6.0"
@@ -55,9 +118,9 @@ resource "aws_iam_policy" "this" {
   depends_on = [
     var.module_depends_on
   ]
-  name_prefix = "${data.aws_eks_cluster.this.id}-external-dns-"
-  description = "EKS external-dns policy for cluster ${data.aws_eks_cluster.this.id}"
-  policy                  = <<EOF
+  name_prefix = "${data.aws_eks_cluster.this.id}-csi-driver-"
+  description = "EKS ebs driver policy for cluster ${data.aws_eks_cluster.this.id}"
+  policy      = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -183,6 +246,17 @@ EOF
 
 }
 
+resource "kubernetes_service_account" "service_account" {
+  automount_service_account_token = true
+  metadata {
+    name = local.name
+    annotations = {
+      "eks.amazonaws.com/role-arn" = module.iam_assumable_role_admin.this_iam_role_arn
+    }
+    namespace = local.namespace
+  }
+}
+
 resource "local_file" "this" {
   count = local.argocd_enabled
   depends_on = [
@@ -190,61 +264,4 @@ resource "local_file" "this" {
   ]
   content  = yamlencode(local.application)
   filename = "${path.root}/${var.argocd.path}/${local.name}.yaml"
-}
-
-locals {
-  repository    = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
-  name          = "aws-ebs-csi-driver"
-  chart         = "aws-ebs-csi-driver"
-  chart_version = var.chart_version
-  conf          = merge(local.conf_defaults, var.conf)
-  conf_defaults = merge({
-    "rbac.create"                                               = true,
-    "resources.limits.cpu"                                      = "100m",
-    "resources.limits.memory"                                   = "300Mi",
-    "resources.requests.cpu"                                    = "100m",
-    "resources.requests.memory"                                 = "300Mi",
-    "aws.region"                                                = data.aws_region.current.name
-    "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn" = module.iam_assumable_role_admin.this_iam_role_arn
-    },
-    {
-      for i, zone in concat(var.hostedzones, data.aws_route53_zone.main.*.name) :
-      "domainFilters[${i}]" => zone
-    }
-  )
-  application = {
-    "apiVersion" = "argoproj.io/v1alpha1"
-    "kind"       = "Application"
-    "metadata" = {
-      "name"      = local.name
-      "namespace" = var.argocd.namespace
-    }
-    "spec" = {
-      "destination" = {
-        "namespace" = local.namespace
-        "server"    = "https://kubernetes.default.svc"
-      }
-      "project" = "default"
-      "source" = {
-        "repoURL"        = local.repository
-        "targetRevision" = local.chart_version
-        "chart"          = local.chart
-        "helm" = {
-          "parameters" = values({
-            for key, value in local.conf :
-            key => {
-              "name"  = key
-              "value" = tostring(value)
-            }
-          })
-        }
-      }
-      "syncPolicy" = {
-        "automated" = {
-          "prune"    = true
-          "selfHeal" = true
-        }
-      }
-    }
-  }
 }

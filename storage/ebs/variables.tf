@@ -51,21 +51,3 @@ variable "tags" {
   default     = {}
   description = "A tags for attaching to new created AWS resources"
 }
-
-# variable "vpc_id" {
-#   type        = string
-#   default     = null
-#   description = "An ID of the existing AWS VPC"
-# }
-
-# variable "hostedzones" {
-#   type        = list(string)
-#   description = "A list of Route53 hosted zones domains to create, need to provide a list of FQDN strings"
-#   default     = []
-# }
-
-# variable "mainzoneid" {
-#   type        = string
-#   default     = ""
-#   description = "An ID of the root Route53 zone for creating sub-domains"
-# }

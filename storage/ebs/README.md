@@ -13,6 +13,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 # Examples
 
+```
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -44,6 +45,7 @@ spec:
   - name: persistent-storage
     persistentVolumeClaim:
       claimName: ebs-claim
+```
 
 ## Requirements
 
