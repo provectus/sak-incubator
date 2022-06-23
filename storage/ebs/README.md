@@ -76,4 +76,4 @@ terraform >= 0.15
 | namespace | A name of the existing namespace | `string` | `"kube-system"` | no |
 | namespace\_name | A name of namespace for creating | `string` | `"kube-system"` | no |
 | tags | A tags for attaching to new created AWS resources | `map(string)` | `{}` | no |
-| chart\_version | The version of the helm chart | `string` | `"2.6.9"` | yes |
+| chart\_version | The version of the helm chart | `string` | `"2.6.9"` | no |
