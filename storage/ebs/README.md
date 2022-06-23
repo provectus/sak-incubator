@@ -74,6 +74,6 @@ terraform >= 0.15
 | domains | A list of domains to use | `list` | `[]` | no |
 | module\_depends\_on | A list of explicit dependencies for the module | `list` | `[]` | no |
 | namespace | A name of the existing namespace | `string` | `"kube-system"` | no |
-| namespace\_name | A name of namespace for creating | `string` | `"external-dns"` | no |
+| namespace\_name | A name of namespace for creating | `string` | `"kube-system"` | no |
 | tags | A tags for attaching to new created AWS resources | `map(string)` | `{}` | no |
 | vpc\_id | An ID of the VPC for the private Route53 zone | `string` | `""` | no |
