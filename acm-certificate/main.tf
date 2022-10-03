@@ -1,22 +1,16 @@
-data "aws_region" "current" {}
-
-locals {
-
-  reuse_existing_acm_arn             = var.existing_acm_arn != ""
-  create_self_signed_acm_certificate = var.existing_acm_arn == "" && var.self_sign_acm_certificate
-  create_normal_acm_certificate      = var.existing_acm_arn == "" && !var.self_sign_acm_certificate
-
-  aws_region = var.aws_region == "" ? data.aws_region.current.name : var.aws_region
-
-}
-
-
 provider "aws" {
   alias  = "certificate"
   region = local.aws_region
 }
 
+data "aws_region" "current" {}
 
+locals {
+  reuse_existing_acm_arn             = var.existing_acm_arn != ""
+  create_self_signed_acm_certificate = var.existing_acm_arn == "" && var.self_sign_acm_certificate
+  create_normal_acm_certificate      = var.existing_acm_arn == "" && !var.self_sign_acm_certificate
+  aws_region = var.aws_region == "" ? data.aws_region.current.name : var.aws_region
+}
 
 resource "aws_cloudwatch_log_group" "acm_cloudtrail_logs" {
   count = var.enable_cloudtrail_logging ? 1 : 0
@@ -42,41 +36,54 @@ resource "random_string" "role_suffix" {
 
 
 resource "aws_s3_bucket" "acm_cloudtrail_logs" {
-
   count  = var.enable_cloudtrail_logging ? 1 : 0
   bucket = "acm-cloudtrail-logs-${var.domain_name}"
   tags   = var.tags
 
-  policy = <<POLICY
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "AWSCloudTrailAclCheck",
-            "Effect": "Allow",
-            "Principal": {
-              "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:GetBucketAcl",
-            "Resource": "acm-cloudtrail-logs-${var.domain_name}"
-        },
-        {
-            "Sid": "AWSCloudTrailWrite",
-            "Effect": "Allow",
-            "Principal": {
-              "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:PutObject",
-            "Resource": "acm-cloudtrail-logs-${var.domain_name}/*",
-            "Condition": {
-                "StringEquals": {
-                    "s3:x-amz-acl": "bucket-owner-full-control"
-                }
-            }
-        }
-    ]
 }
-POLICY
+
+resource "aws_s3_bucket_policy" "acm_cloudtrail_logs" {
+  count  = var.enable_cloudtrail_logging ? 1 : 0
+  bucket = aws_s3_bucket.acm_cloudtrail_logs[0].id
+  policy = data.aws_iam_policy_document.acm_cloudtrail_logs[0].json
+}
+
+data "aws_iam_policy_document" "acm_cloudtrail_logs"{
+  count  = var.enable_cloudtrail_logging ? 1 : 0
+  statement {
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+
+    actions = [
+      "s3:GetBucketAcl"
+    ]
+
+    resources = [
+      "acm-cloudtrail-logs-${var.domain_name}"
+    ]
+  }
+  statement {
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+
+    actions = [
+      "s3:PutObject"
+    ]
+
+    resources = [
+      "acm-cloudtrail-logs-${var.domain_name}/*"
+    ]
+    condition {
+      test     = "StringEquals"
+      values   = ["bucket-owner-full-control"]
+      variable = "s3:x-amz-acl"
+    }
+  }
+
 }
 
 
@@ -84,8 +91,6 @@ POLICY
 resource "aws_iam_role" "cloudtrail_to_cloudwatch" {
   count = var.enable_cloudtrail_logging ? 1 : 0
   name  = "CloudWatchWriteForCloudTrail-${random_string.role_suffix.result}"
-
-  # Terraform's "jsonencode" function converts a
   # Terraform expression result to valid JSON syntax.
   assume_role_policy = data.aws_iam_policy_document.cloudtrail-assume-role-policy.json
   inline_policy {
@@ -128,7 +133,7 @@ resource "aws_cloudtrail" "acm" {
 # normal acm certificate
 module "acm_certificate" {
   source  = "terraform-aws-modules/acm/aws"
-  version = "v2.0"
+  version = "4.0.0"
 
   count                     = local.create_normal_acm_certificate ? 1 : 0
   domain_name               = var.domain_name
@@ -149,11 +154,11 @@ module "acm_certificate" {
 resource "tls_private_key" "self_signed_cert" {
   count     = local.create_self_signed_acm_certificate ? 1 : 0
   algorithm = "RSA"
+  rsa_bits  = 4096
 }
 
 resource "tls_self_signed_cert" "self_signed_cert" {
   count           = local.create_self_signed_acm_certificate ? 1 : 0
-  key_algorithm   = "RSA"
   private_key_pem = tls_private_key.self_signed_cert[0].private_key_pem
 
   subject {
